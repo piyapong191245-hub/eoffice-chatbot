@@ -1,0 +1,194 @@
+[
+  {
+    "id": 1,
+    "name": "Zoom Meeting Room 1",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/Zoom Meeting Room 1.jpg"
+  },
+  {
+    "id": 2,
+    "name": "ห้องประชุม 2 (ห้องเล็ก)",
+    "location": "อาคาร SoftwarePark ชั้น 28",
+    "capacity": 30,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องประชุม 2 (ห้องเล็ก).jpg"
+  },
+  {
+    "id": 3,
+    "name": "ห้องไต่สวน1",
+    "location": "อาคาร SoftwarePark ชั้น 30",
+    "capacity": 10,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องไต่สวน1.jpg"
+  },
+  {
+    "id": 4,
+    "name": "ห้องไต่สวน2",
+    "location": "อาคาร SoftwarePark ชั้น 30",
+    "capacity": 10,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องไต่สวน2.jpg"
+  },
+  {
+    "id": 5,
+    "name": "ห้องไต่สวน3",
+    "location": "อาคาร SoftwarePark ชั้น 30",
+    "capacity": 10,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องไต่สวน3.jpg"
+  },
+  {
+    "id": 6,
+    "name": "ห้องไต่สวน4",
+    "location": "อาคาร SoftwarePark ชั้น 30",
+    "capacity": 10,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องไต่สวน4.jpg"
+  },
+  {
+    "id": 7,
+    "name": "ห้องประชุม 1 (ห้องใหญ่)",
+    "location": "อาคาร SoftwarePark ชั้น 28",
+    "capacity": 80,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องประชุม 1 ห้องใหญ่.jpg"
+  },
+  {
+    "id": 8,
+    "name": "ห้องประชุม(ห้องเล็ก 31)",
+    "location": "อาคาร SoftwarePark ชั้น 31",
+    "capacity": 20,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องประชุม(ห้องเล็ก 31).jpg"
+  },
+  {
+    "id": 9,
+    "name": "ห้องประชุม(กยผ)",
+    "location": "อาคาร SoftwarePark ชั้น 23",
+    "capacity": 15,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องประชุม(กยผ).jpg"
+  },
+  {
+    "id": 10,
+    "name": "ห้องอบรม (กพบ)",
+    "location": "อาคาร SoftwarePark ชั้น 14",
+    "capacity": 25,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องอบรม (กพบ).jpg"
+  },
+  {
+    "id": 11,
+    "name": "ห้องประชุม (กปท.4)",
+    "location": "อาคาร SoftwarePark ชั้น 30",
+    "capacity": 10,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องประชุม (กปท.4).jpg"
+  },
+  {
+    "id": 12,
+    "name": "Zoom Meeting Room 2",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/Zoom Meeting Room 2.jpg"
+  },
+  {
+    "id": 13,
+    "name": "Zoom Meeting Room 3",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/Zoom Meeting Room 3.jpg"
+  },
+  {
+    "id": 14,
+    "name": "Zoom Meeting Room 4",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/Zoom Meeting Room 4.jpg"
+  },
+  {
+    "id": 15,
+    "name": "Zoom Meeting Room 5",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/Zoom Meeting Room 5.jpg"
+  },
+  {
+    "id": 16,
+    "name": "Zoom Meeting Room 6",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/Zoom Meeting Room 6.jpg"
+  },
+  {
+    "id": 17,
+    "name": "Zoom Meeting Room 7",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/Zoom Meeting Room 7.jpg"
+  },
+  {
+    "id": 18,
+    "name": "Zoom Meeting Room 8",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/Zoom Meeting Room 8.jpg"
+  },
+  {
+    "id": 19,
+    "name": "Zoom Meeting Room 9",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/Zoom Meeting Room 9.jpg"
+  },
+  {
+    "id": 20,
+    "name": "Zoom Meeting Room 10",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/Zoom Meeting Room 10.jpg"
+  },
+  {
+    "id": 21,
+    "name": "OneConferenceRoom 1",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 50,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/OneConferenceRoom 1.jpg"
+  },
+  {
+    "id": 22,
+    "name": "OneConferenceRoom 2",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 300,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/OneConferenceRoom 2.jpg"
+  },
+  {
+    "id": 23,
+    "name": "OneConferenceRoom 3",
+    "location": "ระบบการประชุมออนไลน์",
+    "capacity": 50,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/OneConferenceRoom 3.jpg"
+  },
+  {
+    "id": 24,
+    "name": "ห้องประชุมคณะกรรมการ",
+    "location": "อาคาร SoftwarePark ชั้น 38",
+    "capacity": 10,
+    "status": "ใช้งาน",
+    "image": "/images/rooms/ห้องประชุมคณะกรรมการ.jpg"
+  }
+]

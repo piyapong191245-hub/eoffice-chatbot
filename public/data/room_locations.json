@@ -1,0 +1,10 @@
+[
+  { "id": 1, "name": "อาคาร SoftwarePark ชั้น 12A", "status": "ใช้งาน" },
+  { "id": 2, "name": "อาคาร SoftwarePark ชั้น 28", "status": "ใช้งาน" },
+  { "id": 3, "name": "อาคาร SoftwarePark ชั้น 23", "status": "ใช้งาน" },
+  { "id": 4, "name": "อาคาร SoftwarePark ชั้น 14", "status": "ใช้งาน" },
+  { "id": 5, "name": "อาคาร SoftwarePark ชั้น 30", "status": "ใช้งาน" },
+  { "id": 6, "name": "อาคาร SoftwarePark ชั้น 31", "status": "ใช้งาน" },
+  { "id": 7, "name": "อาคาร SoftwarePark ชั้น 38", "status": "ใช้งาน" },
+  { "id": 8, "name": "ระบบการประชุมออนไลน์", "status": "ใช้งาน" }
+]
