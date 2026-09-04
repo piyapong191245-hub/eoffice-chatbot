@@ -55,7 +55,6 @@ export async function POST(req: Request) {
     if (fs.existsSync(carInfoPath)) {
       const carsData: any[] = JSON.parse(fs.readFileSync(carInfoPath, 'utf-8'));
 
-      // ตรวจสอบการค้นหาเฉพาะเลขทะเบียนคันใดคันหนึ่ง
       const matchedCar = carsData.find((car: any) => {
         const license = (car.licensePlate || car.license || '').toLowerCase().replace(/\s+/g, '');
         const searchKey = query.replace(/\s+/g, '');
@@ -71,7 +70,6 @@ export async function POST(req: Request) {
         });
       }
 
-      // ค้นหาภาพรวมรายการรถทั้งหมด
       const carListKeywords = ['รายการรถ', 'ข้อมูลรถ', 'รถส่วนกลาง', 'ทะเบียน', 'รถทั้งหมด', 'ข้อมูละรถ'];
       const isCarListQuery = carListKeywords.some((kw) => query.includes(kw));
 
@@ -131,7 +129,7 @@ export async function POST(req: Request) {
     const statKeywords = [
       'สถิติ', 'สรุป', 'รวม', 'ยอดรวม', 'รายงาน',
       'กี่ครั้ง', 'กี่รายการ', 'เท่าไหร่', 'เท่าไร',
-      'ปี 68', 'ปี 69', '2568', '2569', 'ประวัติ', 
+      'ปี 68', 'ปี 69', '2568', '2569', 'ประวัติ',
       'ยกเลิก', 'ไม่เข้าใช้งาน', 'ไม่เข้าใช้', 'no-show', 'noshow'
     ];
 
@@ -185,8 +183,18 @@ export async function POST(req: Request) {
         const imageUrl = formatImageUrl(matchedRoom.image);
         const imgMarkdown = imageUrl ? `![${matchedRoom.name}](${imageUrl})\n\n` : '';
 
+        // ดึง ID ห้องจากข้อมูล (ถ้าไม่มี ให้เช็คชื่อห้องเพื่อระบุ ID)
+        let roomId = matchedRoom.id || matchedRoom.roomId;
+        if (!roomId) {
+          if (matchedRoom.name.includes('คณะกรรมการ')) roomId = '81';
+          else roomId = '10'; // ค่าเริ่มต้นอื่นๆ
+        }
+
+        const roomUrl = `https://pacc.eoffice.go.th/room-booking/room/${roomId}`;
+
         return NextResponse.json({
-          reply: `🚪 **${matchedRoom.name}**\n\n${imgMarkdown}- **สถานที่:** ${matchedRoom.location}\n- **รองรับ:** ${matchedRoom.capacity} คน\n- **สถานะ:** ${matchedRoom.status}\n\n💡 พิมพ์คำว่า "ขอจองห้อง" เพื่อไปยังหน้าจองห้องประชุมได้เลยครับ`
+          reply: `🚪 **${matchedRoom.name}**\n\n${imgMarkdown}- **สถานที่:** ${matchedRoom.location}\n- **รองรับ:** ${matchedRoom.capacity} คน\n- **สถานะ:** ${matchedRoom.status}`,
+          roomUrl: roomUrl // ส่ง URL เพื่อให้ UI สร้าง QR Code ที่สแกนแล้วเด้งไปห้องนี้โดยตรง
         });
       }
 
@@ -205,7 +213,7 @@ export async function POST(req: Request) {
           .join('\n\n---\n\n');
 
         return NextResponse.json({
-          reply: `🏢 **ข้อมูลห้องประชุมทั้งหมด สำนักงาน ป.ป.ท.:**\n\n${roomList}\n\n💡 พิมพ์ชื่อห้องเพื่อดูรายการจองของห้องนั้นๆ ได้เลยครับ`
+          reply: `🏢 **ข้อมูลห้องประชุมทั้งหมด สำนักงาน ป.ป.ท.:**\n\n${roomList}\n\n💡 พิมพ์ชื่อห้องเพื่อดูรายละเอียดและสแกน QR Code ได้เลยครับ`
         });
       }
     }
@@ -216,10 +224,10 @@ export async function POST(req: Request) {
     const bookingPath = path.join(dataDir, 'room_booking.xlsx');
     if (fs.existsSync(bookingPath)) {
       const fileBuffer = fs.readFileSync(bookingPath);
-      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
 
-      const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer', cellDates: false });
+      const sheetName = workbook.SheetNames[0];
+      const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
 
       const matchedData = data.filter((row) => {
         return Object.entries(row).some(([key, val]) => {
@@ -229,7 +237,20 @@ export async function POST(req: Request) {
       });
 
       if (matchedData.length > 0) {
-        const resultText = matchedData.slice(0, 5).map((item, idx) => {
+        const sortedData = [...matchedData].sort((a, b) => {
+          const dateA = new Date(a['วันที่ใช้ห้อง'] || a['วันที่จอง'] || a['วันที่'] || 0).getTime();
+          const dateB = new Date(b['วันที่ใช้ห้อง'] || b['วันที่จอง'] || b['วันที่'] || 0).getTime();
+          return dateB - dateA;
+        });
+
+        const latestDate = sortedData[0]['วันที่ใช้ห้อง'] || sortedData[0]['วันที่จอง'] || sortedData[0]['วันที่'];
+
+        const latestItems = sortedData.filter((item) => {
+          const itemDate = item['วันที่ใช้ห้อง'] || item['วันที่จอง'] || item['วันที่'];
+          return itemDate === latestDate;
+        });
+
+        const resultText = latestItems.map((item, idx) => {
           const room = item['ชื่อห้อง'] || item['ห้อง'] || item['ชื่อห้องประชุม'] || 'ไม่ระบุห้อง';
           const date = item['วันที่ใช้ห้อง'] || item['วันที่จอง'] || item['วันที่'] || '-';
           const time = item['ช่วงเวลาใช้ห้อง'] || item['เวลา'] || '-';
@@ -241,7 +262,7 @@ export async function POST(req: Request) {
         }).join('\n\n');
 
         return NextResponse.json({
-          reply: `พบข้อมูลการจองห้องประชุมที่เกี่ยวข้อง ${matchedData.length} รายการ:\n\n${resultText}`
+          reply: `พบข้อมูลการจองห้องประชุมล่าสุด (${latestItems.length} รายการ):\n\n${resultText}`
         });
       }
     }
