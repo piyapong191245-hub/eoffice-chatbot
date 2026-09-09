@@ -1,21 +1,21 @@
 'use client';
 import ReactMarkdown from 'react-markdown';
 import { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, RotateCcw, Building2, Minus, ChevronUp, ChevronLeft, ChevronRight, QrCode, ExternalLink } from 'lucide-react';
+import { X, Send, RotateCcw, Building2, Car, Minus, ChevronUp, ChevronLeft, ChevronRight, QrCode, ExternalLink, Layers } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<{ sender: 'user' | 'bot'; text: string; roomUrl?: string }[]>([
-    { 
-      sender: 'bot', 
-      text: 'สวัสดีครับ ผมคือผู้ช่วยระบบจองห้องประชุม **e-Office (สำนักงาน ป.ป.ท.)**\n\nสามารถสอบถามข้อมูลการจองห้องประชุมหรือพิมพ์ชื่อห้องเพื่อรับ QR Code ได้เลยครับ' 
+  const [messages, setMessages] = useState<{ sender: 'user' | 'bot'; text: string; qrUrl?: string; itemType?: 'room' | 'car' }[]>([
+    {
+      sender: 'bot',
+      text: 'สวัสดีครับ ผมคือผู้ช่วยระบบ **e-Office (สำนักงาน ป.ป.ท.)**\n\nสามารถสอบถามข้อมูลการจอง **ห้องประชุม** หรือ **รถยนต์ส่วนกลาง** ได้เลยครับ'
     }
   ]);
   const [loading, setLoading] = useState(false);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -52,13 +52,16 @@ export default function ChatbotWidget() {
       });
       const data = await res.json();
 
-      // บอทส่งคำตอบกลับ พร้อมรองรับ field roomUrl (ถ้ามี)
+      const qrUrl = data.carUrl || data.roomUrl;
+      const itemType = data.carUrl ? 'car' : data.roomUrl ? 'room' : undefined;
+
       setMessages((prev) => [
-        ...prev, 
-        { 
-          sender: 'bot', 
+        ...prev,
+        {
+          sender: 'bot',
           text: data.reply,
-          roomUrl: data.roomUrl // ส่ง URL เช่น https://pacc.eoffice.go.th/room-booking/room/81
+          qrUrl: qrUrl,
+          itemType: itemType
         }
       ]);
 
@@ -75,7 +78,7 @@ export default function ChatbotWidget() {
 
   const clearChat = () => {
     setMessages([
-      { sender: 'bot', text: 'สวัสดีครับ ผมคือผู้ช่วยระบบจองห้องประชุม **e-Office (สำนักงาน ป.ป.ท.)**\n\nสามารถสอบถามข้อมูลการจองห้องประชุมหรือจองรถยนต์ได้เลยครับ' }
+      { sender: 'bot', text: 'สวัสดีครับ ผมคือผู้ช่วยระบบ **e-Office (สำนักงาน ป.ป.ท.)**\n\nสามารถสอบถามข้อมูลการจอง **ห้องประชุม** หรือ **รถยนต์ส่วนกลาง** ได้เลยครับ' }
     ]);
   };
 
@@ -86,8 +89,8 @@ export default function ChatbotWidget() {
           onClick={() => { setIsOpen(true); setIsMinimized(false); }}
           className="bg-blue-900 hover:bg-blue-800 text-white p-4 rounded-full shadow-2xl flex items-center gap-2 transition-all transform hover:scale-105 border-2 border-amber-400 cursor-pointer"
         >
-          <Building2 className="w-6 h-6 text-amber-400" />
-          <span className="font-medium text-sm hidden sm:inline">สอบถามการจองห้องประชุม</span>
+          <Layers className="w-6 h-6 text-amber-400" />
+          <span className="font-medium text-sm hidden sm:inline">สอบถามการจองห้องประชุม/รถยนต์</span>
         </button>
       )}
 
@@ -96,19 +99,20 @@ export default function ChatbotWidget() {
 
           {/* Header */}
           <div className="bg-linear-to-r from-blue-950 via-blue-900 to-blue-800 text-white p-3.5 flex justify-between items-center shadow-md select-none">
-            <div 
+            <div
               className="flex items-center gap-2.5 cursor-pointer flex-1"
               onClick={() => setIsMinimized(!isMinimized)}
             >
-              <div className="bg-amber-400 p-1.5 rounded-lg text-blue-950">
-                <Building2 className="w-5 h-5" />
+              <div className="bg-amber-400 p-1.5 rounded-lg text-blue-950 flex gap-1 items-center">
+                <Building2 className="w-4 h-4" />
+                <Car className="w-4 h-4" />
               </div>
               <div>
                 <h3 className="font-bold text-sm tracking-wide text-amber-300">PACC e-Office Assistant</h3>
-                <p className="text-[11px] text-blue-200">ระบบสอบถามการจองห้องประชุม</p>
+                <p className="text-[11px] text-blue-200">ระบบสอบถามการจองห้องประชุม & รถยนต์</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsMinimized(!isMinimized)}
@@ -141,11 +145,10 @@ export default function ChatbotWidget() {
                 {messages.map((msg, idx) => (
                   <div
                     key={idx}
-                    className={`p-3 rounded-2xl max-w-[88%] shadow-sm ${
-                      msg.sender === 'user'
+                    className={`p-3 rounded-2xl max-w-[88%] shadow-sm ${msg.sender === 'user'
                         ? 'bg-blue-900 text-white ml-auto rounded-tr-none'
                         : 'bg-white text-gray-800 mr-auto border border-gray-100 rounded-tl-none'
-                    }`}
+                      }`}
                   >
                     <ReactMarkdown
                       components={{
@@ -155,7 +158,7 @@ export default function ChatbotWidget() {
                           <img
                             {...props}
                             style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', margin: '8px 0', display: 'block' }}
-                            alt={props.alt || 'room image'}
+                            alt={props.alt || 'image'}
                           />
                         ),
                         h3: ({ children }) => <h3 className="font-bold text-sm text-blue-950 my-1">{children}</h3>,
@@ -165,25 +168,29 @@ export default function ChatbotWidget() {
                       {msg.text}
                     </ReactMarkdown>
 
-                    {/* การ์ดแสดง QR Code กรณีที่บอทตอบกลับข้อมูลห้องประชุม */}
-                    {msg.sender === 'bot' && msg.roomUrl && (
+                    {/* การ์ดแสดง QR Code */}
+                    {msg.sender === 'bot' && msg.qrUrl && (
                       <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-gray-200 flex flex-col items-center gap-2">
                         <div className="flex items-center gap-1 text-[11px] font-semibold text-blue-950">
                           <QrCode className="w-3.5 h-3.5 text-amber-500" />
-                          <span>สแกน QR Code เพื่อเปิดหน้าห้องนี้</span>
+                          <span>
+                            {msg.itemType === 'car'
+                              ? 'สแกน QR Code เพื่อเปิดหน้ารายละเอียดรถคันนี้'
+                              : 'สแกน QR Code เพื่อเปิดหน้าห้องประชุมนี้'}
+                          </span>
                         </div>
-                        
+
                         <div className="p-2 bg-white rounded-lg shadow-xs border border-gray-100">
-                          <QRCodeSVG value={msg.roomUrl} size={115} />
+                          <QRCodeSVG value={msg.qrUrl} size={115} />
                         </div>
 
                         <a
-                          href={msg.roomUrl}
+                          href={msg.qrUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="mt-1 inline-flex items-center gap-1 text-[11px] text-blue-700 hover:text-blue-900 font-medium hover:underline"
                         >
-                          เปิดไปยังหน้าห้องประชุม <ExternalLink className="w-3 h-3" />
+                          {msg.itemType === 'car' ? 'เปิดไปยังหน้ารายละเอียดรถ' : 'เปิดไปยังหน้าห้องประชุม'} <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
                     )}
@@ -221,23 +228,47 @@ export default function ChatbotWidget() {
                     >
                       🏢 จองห้องประชุม
                     </button>
+
                     <button
                       onClick={() => handleSend('ขอจองรถ')}
                       className="inline-flex items-center gap-1 bg-blue-50 text-blue-900 hover:bg-blue-100 px-2.5 py-1 rounded-full border border-blue-200 text-xs transition-colors shrink-0 cursor-pointer"
                     >
                       🚗 จองรถยนต์
                     </button>
+
+                    <button
+                      onClick={() => handleSend('ประเภทรถ')}
+                      className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 hover:bg-amber-100 px-2.5 py-1 rounded-full border border-amber-300 text-xs transition-colors shrink-0 cursor-pointer"
+                    >
+                      🚘 ประเภทรถ
+                    </button>
+
+                    <button
+                      onClick={() => handleSend('รายการรถ')}
+                      className="inline-flex items-center gap-1 bg-sky-50 text-sky-900 hover:bg-sky-100 px-2.5 py-1 rounded-full border border-sky-200 text-xs transition-colors shrink-0 cursor-pointer"
+                    >
+                      🚙 รายการรถทั้งหมด
+                    </button>
+
                     <button
                       onClick={() => handleSend('ข้อมูลห้อง')}
-                      className="inline-flex items-center gap-1 bg-blue-50 text-blue-900 hover:bg-blue-100 px-2.5 py-1 rounded-full border border-blue-200 text-xs transition-colors shrink-0 cursor-pointer"
+                      className="inline-flex items-center gap-1 bg-purple-50 text-purple-900 hover:bg-purple-100 px-2.5 py-1 rounded-full border border-purple-200 text-xs transition-colors shrink-0 cursor-pointer"
                     >
                       🚪 ข้อมูลห้อง
                     </button>
+
                     <button
                       onClick={() => handleSend('สถานที่')}
                       className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300 text-xs transition-colors shrink-0 cursor-pointer"
                     >
                       📍 สถานที่/ชั้น
+                    </button>
+
+                    <button
+                      onClick={() => handleSend('สถิติ')}
+                      className="inline-flex items-center gap-1 bg-rose-50 text-rose-900 hover:bg-rose-100 px-2.5 py-1 rounded-full border border-rose-200 text-xs transition-colors shrink-0 cursor-pointer"
+                    >
+                      📊 รายงานสถิติ
                     </button>
                   </div>
 
@@ -255,7 +286,7 @@ export default function ChatbotWidget() {
                 <input
                   type="text"
                   className="flex-1 border border-gray-300 rounded-xl px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent bg-gray-50"
-                  placeholder="พิมพ์ชื่อห้อง, วันที่ หรือผู้จอง..."
+                  placeholder="พิมพ์ชื่อห้อง หรือ เลขทะเบียนรถ..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
