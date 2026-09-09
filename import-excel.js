@@ -1,15 +1,14 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+require('dotenv').config({ path: '.env.local' });
 const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
 const { Pool } = require('pg');
 
-// 🔑 ตั้งค่าการเชื่อมต่อฐานข้อมูลตรงนี้
+// 🔑 ตั้งค่าการเชื่อมต่อยิงตรงเข้า Cloud Supabase ผ่านค่าใน .env.local
 const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'eoffice_db',
-  password: 'Net_0801071720', // 👈 แก้ไขใส่รหัสผ่านตรงนี้ได้เลยครับ
-  port: 5432,
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
 async function importExcelToPostgres() {
@@ -25,7 +24,7 @@ async function importExcelToPostgres() {
     const sheetName = workbook.SheetNames[0];
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
 
-    console.log(`📦 พบข้อมูลทั้งหมด ${data.length} รายการ กำลังนำเข้าฐานข้อมูล...`);
+    console.log(`📦 พบข้อมูลทั้งหมด ${data.length} รายการ กำลังนำเข้า Cloud Supabase...`);
 
     for (const row of data) {
       const roomName = row['ชื่อห้อง'] || row['ห้อง'] || row['ชื่อห้องประชุม'] || '';
@@ -46,7 +45,7 @@ async function importExcelToPostgres() {
       );
     }
 
-    console.log('✅ นำเข้าข้อมูลทั้งหมดลง PostgreSQL เรียบร้อยแล้ว!');
+    console.log('✅ นำเข้าข้อมูลทั้งหมดลง Cloud Supabase เรียบร้อยแล้ว!');
   } catch (err) {
     console.error('❌ เกิดข้อผิดพลาด:', err);
   } finally {

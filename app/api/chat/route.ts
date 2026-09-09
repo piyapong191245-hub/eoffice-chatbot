@@ -1,22 +1,21 @@
 export const runtime = 'nodejs'; // บังคับให้ใช้ Node.js Runtime เท่านั้น
 export const maxDuration = 30;   // เพิ่ม Timeout เป็น 30 วินาทีป้องกันโมเดลโหลดช้า
-
 import { NextResponse } from 'next/server';
 import path from 'path';
 import * as XLSX from 'xlsx';
 import fs from 'fs';
-import pool from '@/lib/db'; // นำเข้าตัวเชื่อมต่อ PostgreSQL
+import pool from '@/lib/db'; // นำเข้าตัวเชื่อมต่อ PostgreSQL ในเครื่อง
+const { pipeline } = await import('@xenova/transformers');
 
 // -------------------------------------------------------------
-// ระบบ AI Embedding Pipeline (Lazy Loading เพื่อไม่ให้ Vercel พัง)
+// ระบบ AI Embedding Pipeline (รันบน Local Machine ฟรี 100%)
 // -------------------------------------------------------------
 class EmbeddingPipeline {
   static instance: any = null;
 
   static async getInstance() {
     if (this.instance === null) {
-      // ใช้ Dynamic Import ภายในฟังก์ชันเท่านั้น
-      const { pipeline } = await import('@xenova/transformers');
+      // โหลดโมเดล multilingual-e5-small ภาษาไทย
       this.instance = await pipeline('feature-extraction', 'Xenova/multilingual-e5-small');
     }
     return this.instance;
@@ -115,6 +114,7 @@ export async function POST(req: Request) {
     if (isCarTypeQuery) {
       const carInfoPath = path.join(dataDir, 'cars_info.json');
       
+      // กรณีพิมพ์ระบุประเภทรถเฉพาะ เช่น "รถยนต์", "รถตู้", "รถกะบะ"
       if (fs.existsSync(carInfoPath)) {
         const carsData: any[] = JSON.parse(fs.readFileSync(carInfoPath, 'utf-8'));
         
@@ -125,6 +125,7 @@ export async function POST(req: Request) {
         } else if (query.includes('กะบะ') || query.includes('กระบะ')) {
           filteredCars = carsData.filter((c: any) => (c.type || '').includes('กะบะ') || (c.type || '').includes('กระบะ'));
         } else if (query.includes('รถยนต์') || query.includes('เก๋ง')) {
+          // ถ้าพิมพ์ "รถยนต์" ให้ดึงรถนั่งส่วนบุคคล/รถเก๋ง หรือรถที่ไม่ใช่ตู้และกะบะ
           filteredCars = carsData.filter((c: any) => 
             !(c.type || '').includes('ตู้') && !(c.type || '').includes('กะบะ') && !(c.type || '').includes('กระบะ')
           );
@@ -143,6 +144,7 @@ export async function POST(req: Request) {
         }
       }
 
+      // กรณีถามคำว่า "ประเภทรถ" แบบภาพรวมทั่วไป
       const carTypePath = path.join(dataDir, 'car_types.json');
       if (fs.existsSync(carTypePath)) {
         const carTypesData: any[] = JSON.parse(fs.readFileSync(carTypePath, 'utf-8'));
@@ -180,6 +182,7 @@ export async function POST(req: Request) {
         });
       }
 
+      // กรณีขอดูรายการรถทั้งหมด
       const carListKeywords = ['รายการรถ', 'ข้อมูลรถ', 'รถส่วนกลาง', 'ทะเบียน', 'รถทั้งหมด'];
       const isCarListQuery = carListKeywords.some((kw) => query.includes(kw));
 
@@ -220,14 +223,16 @@ export async function POST(req: Request) {
     const isLocationQuery = locationKeywords.some((kw) => query === kw || query.includes(kw));
 
     if (isLocationQuery) {
+      // 3.1 กรณีระบุเลขชั้น เช่น "ชั้น 14" หรือ "อาคาร SoftwarePark ชั้น 14"
       const floorMatch = query.match(/ชั้น\s*(\d+)/) || query.match(/(\d+)\s*ชั้น/);
       if (floorMatch) {
-        const targetFloor = floorMatch[1];
+        const targetFloor = floorMatch[1]; // ดึงตัวเลขชั้นออกมา เช่น "14"
         const roomInfoPath = path.join(dataDir, 'room_info.json');
 
         if (fs.existsSync(roomInfoPath)) {
           const roomsData: any[] = JSON.parse(fs.readFileSync(roomInfoPath, 'utf-8'));
           
+          // กรองหาห้องประชุมที่มีสถานที่ตั้งตรงกับเลขชั้นที่พิมพ์
           const roomsOnFloor = roomsData.filter((r: any) => 
             (r.location || '').includes(`ชั้น ${targetFloor}`) || (r.location || '').includes(`ชั้น${targetFloor}`)
           );
@@ -250,6 +255,7 @@ export async function POST(req: Request) {
         }
       }
 
+      // 3.2 กรณีถามภาพรวมสถานที่ตั้ง (ไม่ได้ระบุตัวเลขชั้น)
       const locPath = path.join(dataDir, 'room_locations.json');
       if (fs.existsSync(locPath)) {
         const locationsData = JSON.parse(fs.readFileSync(locPath, 'utf-8'));
@@ -314,10 +320,12 @@ export async function POST(req: Request) {
     if (fs.existsSync(roomInfoPath)) {
       const roomsData: any[] = JSON.parse(fs.readFileSync(roomInfoPath, 'utf-8'));
 
+      // 5.0 ตรวจจับกรณีพิมพ์คำปฏิเสธ Zoom/ออนไลน์ เพื่อดึงเฉพาะห้องประชุม On-site
       const excludeZoomKeywords = ['ไม่เอา zoom', 'ไม่เอาซูม', 'ไม่รวม zoom', 'ไม่ใช่ zoom', 'ไม่เอาห้อง zoom', 'ไม่เอาออนไลน์'];
       const isExcludeOnlyQuery = excludeZoomKeywords.some((kw) => query === kw || query.includes(kw));
 
       if (isExcludeOnlyQuery) {
+        // กรองเอาเฉพาะห้องที่ไม่ใช่ Zoom และไม่อยู่ในสถานที่ตั้งออนไลน์
         const onsiteRooms = roomsData.filter((room: any) => 
           !(room.name || '').toLowerCase().includes('zoom') && 
           !(room.location || '').toLowerCase().includes('ออนไลน์') &&
@@ -338,10 +346,12 @@ export async function POST(req: Request) {
         }
       }
 
+      // 5.1 ตรวจสอบคำค้นหาเกี่ยวกับ "ออนไลน์ / zoom / ระบบการประชุมออนไลน์"
       const onlineKeywords = ['ระบบการประชุมออนไลน์', 'ประชุมออนไลน์', 'ออนไลน์', 'zoom'];
       const isOnlineQuery = onlineKeywords.some((kw) => query.includes(kw));
 
       if (isOnlineQuery) {
+        // กรองเอาเฉพาะห้องที่มีชื่อหรือสถานที่ตั้งเกี่ยวกับ Zoom หรือ ออนไลน์
         const onlineRooms = roomsData.filter((room: any) => 
           (room.name || '').toLowerCase().includes('zoom') || 
           (room.location || '').toLowerCase().includes('ออนไลน์') ||
@@ -362,6 +372,7 @@ export async function POST(req: Request) {
         }
       }
 
+      // 5.2 ค้นหาแบบตรงชื่อห้องเดี่ยวๆ
       const matchedRoom = roomsData.find((room) =>
         query.includes(room.name.toLowerCase()) || room.name.toLowerCase().includes(query)
       );
@@ -384,6 +395,7 @@ export async function POST(req: Request) {
         });
       }
 
+      // 5.3 ค้นหารายชื่อห้องทั้งหมด
       const roomInfoKeywords = ['ข้อมูลห้อง', 'ห้องประชุมทั้งหมด', 'รายชื่อห้อง', 'รายการห้อง'];
       const isRoomInfoQuery = roomInfoKeywords.some((kw) => query.includes(kw));
 
@@ -402,7 +414,6 @@ export async function POST(req: Request) {
         });
       }
     }
-
     // -------------------------------------------------------------
     // 6. ค้นหารายการจองห้องประชุมจาก PostgreSQL (ตาราง room_bookings)
     // -------------------------------------------------------------
@@ -410,6 +421,7 @@ export async function POST(req: Request) {
 
     if (!isCarSearch) {
       try {
+        // ดึงข้อมูลการจองห้องประชุมจาก PostgreSQL โดยเรียงจาก "เก่าสุดไปล่าสุด" (ORDER BY start_time ASC)
         const bookingResult = await pool.query(`
           SELECT 
             room_name, 
@@ -432,6 +444,7 @@ export async function POST(req: Request) {
             const startDate = new Date(item.start_time);
             const endDate = new Date(item.end_time);
 
+            // แปลงรูปแบบวันที่และเวลาให้อ่านง่าย
             const formattedDate = startDate.toLocaleDateString('th-TH', {
               year: 'numeric',
               month: 'long',
@@ -456,16 +469,19 @@ export async function POST(req: Request) {
     }
 
     // -------------------------------------------------------------
-    // 7. AI Semantic Search (ครอบ trycatch กันไว้ไม่ให้พัง)
+    // 7. AI Semantic Search (ป้องกันคำมั่ว/พิมพ์มั่ว 100%)
     // -------------------------------------------------------------
     try {
       const cleanText = userMessage.trim().toLowerCase();
 
+      // 1. ตรวจจับคำมั่วบนแป้นพิมพ์ภาษาไทย (Keyboard Spam Pattern)
       const isKeyboardSpam = /^[ฟหกด่าสวงผปแอิื์ํี๊็่้๋1-90\-=_+]+$/i.test(cleanText) && 
         !['ห้อง', 'จอง', 'รถ', 'ชั้น', 'สถิติ', 'สอบถาม', 'สแกน', 'ประชุม'].some(k => cleanText.includes(k));
 
+      // 2. ตรวจสอบความยาวและรูปแบบคำ
       const isTooShort = cleanText.length < 2;
 
+      // หากเป็นคำมั่ว ให้ข้าม AI Search แล้วส่งไป Fallback ทันที
       if (!isKeyboardSpam && !isTooShort) {
         const allEmbeddings = await pool.query('SELECT room_name, content, embedding_json FROM room_embeddings');
 
@@ -480,7 +496,6 @@ export async function POST(req: Request) {
             );
           }
 
-          // Dynamic load embedding pipeline
           const queryVector = await getEmbedding(userMessage, true);
 
           const ranked = filteredRows.map((row) => {
@@ -489,6 +504,7 @@ export async function POST(req: Request) {
             return { ...row, score };
           }).sort((a, b) => b.score - a.score);
 
+          // 3. ตั้งค่า Threshold ไว้ที่ 0.85 (85%) เพื่อให้กรองเฉพาะคำที่มีความหมายใกล้เคียงจริงๆ เท่านั้น
           if (ranked.length > 0 && ranked[0].score >= 0.85) {
             const bestMatch = ranked[0];
 
@@ -509,7 +525,7 @@ export async function POST(req: Request) {
         }
       }
     } catch (aiErr) {
-      console.error("AI Semantic Search Error (Handled):", aiErr);
+      console.error("AI Semantic Search Error:", aiErr);
     }
 
     // Fallback เมื่อไม่พบข้อมูลใดๆ
