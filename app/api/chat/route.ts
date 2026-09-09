@@ -3,7 +3,7 @@ import path from 'path';
 import * as XLSX from 'xlsx';
 import fs from 'fs';
 import pool from '@/lib/db'; // นำเข้าตัวเชื่อมต่อ PostgreSQL ในเครื่อง
-import { pipeline } from '@xenova/transformers';
+const { pipeline } = await import('@xenova/transformers');
 
 // -------------------------------------------------------------
 // ระบบ AI Embedding Pipeline (รันบน Local Machine ฟรี 100%)
