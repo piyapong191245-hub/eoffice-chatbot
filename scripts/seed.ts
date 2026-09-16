@@ -2,16 +2,6 @@
 import pool from '../lib/db';
 import fs from 'fs';
 import path from 'path';
-import { pipeline } from '@xenova/transformers';
-
-async function getEmbedding(text: string): Promise<number[]> {
-  const extractor = await pipeline('feature-extraction', 'Xenova/multilingual-e5-small');
-  const output = await extractor(`passage: ${text}`, {
-    pooling: 'mean',
-    normalize: true,
-  });
-  return Array.from(output.data);
-}
 
 async function runSeed() {
   console.log("🚀 กำลังอ่านข้อมูลห้องประชุมจริงจาก room_info.json...");
@@ -24,13 +14,10 @@ async function runSeed() {
 
   const roomsData: any[] = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 
-  // เคลียร์ข้อมูลเก่าก่อนลงข้อมูลใหม่
+  // เคลียร์ข้อมูลเก่าก่อนลงข้อมูลใหม่ (ปรับชื่อตารางตามที่คุณใช้งานจริง)
   await pool.query('TRUNCATE TABLE room_embeddings');
 
   for (const room of roomsData) {
-    // -------------------------------------------------------------
-    // คำนวณและระบุช่วงความจุอย่างแม่นยำ ไม่ใส่ตัวเลขอื่นปะปน
-    // -------------------------------------------------------------
     const capacityNum = parseInt(room.capacity) || 0;
     let sizeCategory = '';
 
@@ -44,20 +31,17 @@ async function runSeed() {
       sizeCategory = 'ห้องประชุมขนาดเล็ก มินิ จุคนได้ไม่เกินสิบคน';
     }
 
-    // สร้างข้อความบริบทโดยระบุความจุเป็นตัวเลขเดี่ยวๆ เพื่อความแม่นยำของ Vector
     const contentText = `ห้องประชุม: ${room.name} | ประเภท: ${sizeCategory} | ความจุรองรับได้สูงสุด: ${capacityNum} คน | สถานที่ตั้ง: ${room.location || '-'} | สถานะการใช้งาน: ${room.status || 'พร้อมใช้งาน'}`;
     
-    const vector = await getEmbedding(contentText);
-    const vectorJson = JSON.stringify(vector);
-
+    // บันทึกข้อมูลลงฐานข้อมูลโดยตรงโดยไม่ต้องสร้าง Vector
     await pool.query(
       'INSERT INTO room_embeddings (room_name, content, embedding_json) VALUES ($1, $2, $3)',
-      [room.name, contentText, vectorJson]
+      [room.name, contentText, null] // ส่งค่า embedding_json เป็น null
     );
-    console.log(`✅ บันทึกข้อมูลและสร้าง Vector สำหรับห้อง: ${room.name} (${capacityNum} คน) เรียบร้อยแล้ว`);
+    console.log(`✅ บันทึกข้อมูลห้อง: ${room.name} (${capacityNum} คน) เรียบร้อยแล้ว`);
   }
 
-  console.log("🎉 บันทึกข้อมูล Vector สำหรับห้องจริงทั้งหมดสำเร็จ!");
+  console.log("🎉 บันทึกข้อมูลห้องทั้งหมดสำเร็จแบบไม่ใช้ AI!");
   process.exit(0);
 }
 

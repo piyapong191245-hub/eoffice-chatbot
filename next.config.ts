@@ -1,22 +1,11 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['@xenova/transformers'],
-  turbopack: {
-    resolveAlias: {
-      'sharp$': 'false',
-      'onnxruntime-node$': 'false',
-    },
-  },
-  webpack: (config) => {
-    config.resolve = config.resolve || {};
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'sharp$': false,
-      'onnxruntime-node$': false,
-    };
-    return config;
-  },
+  allowedDevOrigins: ['10.170.112.47'],
+  
+  // ปิด Error ของ Turbopack เมื่อมีไฟล์ config พิเศษ
+  turbopack: {},
+  
 };
 
 export default nextConfig;
