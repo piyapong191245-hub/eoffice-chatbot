@@ -22,10 +22,24 @@ function readJsonFile<T = any>(filePath: string): T | null {
 export async function POST(req: Request) {
   let userMessage = '';
 
-  const sendResponse = async (data: { reply: string; actionUrl?: string; carUrl?: string; roomUrl?: string }, status = 200) => {
+ const sendResponse = async (data: { reply: string; actionUrl?: string; carUrl?: string; roomUrl?: string }, status = 200) => {
     if (userMessage) {
-      const now = new Date();
-      pool.execute('INSERT INTO chat_logs (user_message, bot_reply, created_at) VALUES (?, ?, ?)', [userMessage, data.reply, now])
+      // ดึงเวลาปัจจุบันตาม Timezone ประเทศไทย (Asia/Bangkok) โดยตรง
+      const options: Intl.DateTimeFormatOptions = {
+        timeZone: 'Asia/Bangkok',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      };
+      
+      const formatter = new Intl.DateTimeFormat('en-CA', options); // แปลงเป็น YYYY-MM-DD HH:mm:ss
+      const nowString = formatter.format(new Date()).replace(',', '');
+
+      pool.execute('INSERT INTO chat_logs (user_message, bot_reply, created_at) VALUES (?, ?, ?)', [userMessage, data.reply, nowString])
         .catch((err: any) => console.error("MariaDB Log Error (Skipped):", err.message));
     }
     return NextResponse.json(data, { status });
