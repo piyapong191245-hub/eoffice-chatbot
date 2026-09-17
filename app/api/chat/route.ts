@@ -22,7 +22,7 @@ function readJsonFile<T = any>(filePath: string): T | null {
 export async function POST(req: Request) {
   let userMessage = '';
 
- const sendResponse = async (data: { reply: string; actionUrl?: string; carUrl?: string; roomUrl?: string }, status = 200) => {
+  const sendResponse = async (data: { reply: string; actionUrl?: string; carUrl?: string; roomUrl?: string }, status = 200) => {
     if (userMessage) {
       // ดึงเวลาปัจจุบันตาม Timezone ประเทศไทย (Asia/Bangkok) โดยตรง
       const options: Intl.DateTimeFormatOptions = {
@@ -350,7 +350,7 @@ export async function POST(req: Request) {
     // -------------------------------------------------------------
     // 5. Statistics Queries
     // -------------------------------------------------------------
-   const statKeywords = ['สถิติ', 'สรุปสถิติ', 'รายงานสถิติ', 'ยอดรวมการใช้งาน', 'สถิติการใช้งาน', 'ประวัติการจอง', 'สถิติยกเลิก', 'สถิติไม่เข้าใช้'];
+    const statKeywords = ['สถิติ', 'สรุปสถิติ', 'รายงานสถิติ', 'ยอดรวมการใช้งาน', 'สถิติการใช้งาน', 'ประวัติการจอง', 'สถิติยกเลิก', 'สถิติไม่เข้าใช้'];
     if (statKeywords.some((kw) => query.includes(kw))) {
       if (['ไม่เข้าใช้งาน', 'ไม่เข้าใช้', 'noshow', 'no-show'].some(k => query.includes(k))) {
         return await sendResponse({
@@ -454,40 +454,7 @@ export async function POST(req: Request) {
     }
 
     // -------------------------------------------------------------
-    // 7. Keyword / Standard Search (ทดแทน AI Semantic Search เดิม)
-    // -------------------------------------------------------------
-    try {
-      const ambiguousKeywords = ['ขอห้อง', 'ห้อง', 'จอง', 'ขอจอง', 'อยากได้ห้อง', 'หาห้อง'];
-      const isAmbiguousQuery = ambiguousKeywords.some(kw => query === kw);
-
-      if (query.length >= 3 && !isAmbiguousQuery && !isIgnoredQuery) {
-        const searchLike = `%${query}%`;
-        const [embeddingRows]: any = await pool.query(
-          'SELECT room_name, content FROM room_embeddings WHERE room_name LIKE ? OR content LIKE ? LIMIT 1',
-          [searchLike, searchLike]
-        );
-
-        if (Array.isArray(embeddingRows) && embeddingRows.length > 0) {
-          const bestMatch = embeddingRows[0];
-          let roomId = '10';
-
-          if (roomsData) {
-            const matched = roomsData.find(r => r.name.includes(bestMatch.room_name) || bestMatch.room_name.includes(r.name));
-            if (matched?.id || matched?.roomId) roomId = matched.id || matched.roomId;
-          }
-
-          return await sendResponse({
-            reply: `🤖 **พบข้อมูลที่ตรงกับความต้องการของคุณ:**\n\n🚪 **${bestMatch.room_name}**\n📍 ${bestMatch.content}`,
-            roomUrl: `https://pacc.eoffice.go.th/room-booking/room/${roomId}`
-          });
-        }
-      }
-    } catch (fallbackErr) {
-      console.error("Database Search Error:", fallbackErr);
-    }
-
-    // -------------------------------------------------------------
-    // 8. Fallback Response
+    // 7. Fallback Response
     // -------------------------------------------------------------
     return await sendResponse({
       reply: `ไม่พบข้อมูลที่ตรงกับ "${userMessage}"\n\n💡 **คำแนะนำการพิมพ์:**\n\n- พิมพ์คำว่า **"ขอจองห้อง"** หรือ **"ขอจองรถ"**\n- พิมพ์คำว่า **"รายการรถ"** หรือ **"ทะเบียนรถ"**\n- พิมพ์คำว่า **"ข้อมูลห้อง"** หรือ **"สถานที่"**\n- กรุณาพิมพ์ชื่อ-นามสกุลจริงให้ครบถ้วน\n- พิมพ์คำว่า **"สถิติ"** เพื่อดูรายงานสรุปยอดการใช้งาน`
