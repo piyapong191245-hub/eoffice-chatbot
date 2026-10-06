@@ -35,12 +35,19 @@ export async function POST(req: Request) {
         second: '2-digit',
         hour12: false
       };
-      
+
       const formatter = new Intl.DateTimeFormat('en-CA', options); // แปลงเป็น YYYY-MM-DD HH:mm:ss
       const nowString = formatter.format(new Date()).replace(',', '');
 
-      pool.execute('INSERT INTO chat_logs (user_message, bot_reply, created_at) VALUES (?, ?, ?)', [userMessage, data.reply, nowString])
-        .catch((err: any) => console.error("MariaDB Log Error (Skipped):", err.message));
+      // 💡 แก้ไข: ใส่ try-catch + await เพื่อให้รอ MariaDB บันทึกสำเร็จจริงก่อนส่ง Response
+      try {
+        await pool.execute(
+          'INSERT INTO chat_logs (user_message, bot_reply, created_at) VALUES (?, ?, ?)',
+          [userMessage, data.reply, nowString]
+        );
+      } catch (err: any) {
+        console.error("MariaDB Log Error:", err.message);
+      }
     }
     return NextResponse.json(data, { status });
   };
@@ -369,7 +376,7 @@ export async function POST(req: Request) {
         const fileBuffer = fs.readFileSync(statPath);
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
-        const statData: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]); 
+        const statData: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
         if (statData.length > 0) {
           const row = statData[0];
