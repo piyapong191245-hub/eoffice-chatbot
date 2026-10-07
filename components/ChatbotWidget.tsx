@@ -19,7 +19,8 @@ export default function ChatbotWidget() {
   const [messages, setMessages] = useState<MessageType[]>([
     {
       sender: 'bot',
-      text: 'สวัสดีครับ ผมคือผู้ช่วยระบบ **e-Office (สำนักงาน ป.ป.ท.)**\n\nสามารถสอบถามข้อมูลการจอง **ห้องประชุม** หรือ **รถยนต์ส่วนกลาง** ได้เลยครับ'
+      text: 'สวัสดีครับ ผมคือผู้ช่วยระบบ **e-Office (สำนักงาน ป.ป.ท.)**\n\nสามารถสอบถามข้อมูลการจอง **ห้องประชุม** หรือ **รถยนต์ส่วนกลาง** ได้เลยครับ',
+      itemType: 'greeting'
     }
   ]);
   const [loading, setLoading] = useState(false);
@@ -53,31 +54,38 @@ export default function ChatbotWidget() {
     setLoading(true);
 
     try {
-      const isStat = 
-        messageToSend.includes('สถิติ') || 
-        messageToSend.includes('รายงาน') || 
-        messageToSend.includes('กราฟ') || 
+      const isGreeting =
+        messageToSend.includes('สวัสดี') ||
+        messageToSend.includes('ทักทาย') ||
+        messageToSend.includes('หวัดดี') ||
+        messageToSend.includes('hello') ||
+        messageToSend.includes('hi');
+
+      const isStat =
+        messageToSend.includes('สถิติ') ||
+        messageToSend.includes('รายงาน') ||
+        messageToSend.includes('กราฟ') ||
         messageToSend.includes('สรุป');
 
-      const isLocation = 
-        messageToSend.includes('สถานที่') || 
-        messageToSend.includes('ชั้น') || 
-        messageToSend.includes('ตำแหน่ง') || 
+      const isLocation =
+        messageToSend.includes('สถานที่') ||
+        messageToSend.includes('ชั้น') ||
+        messageToSend.includes('ตำแหน่ง') ||
         messageToSend.includes('แผนที่');
 
-      const isRoomInfo = 
-        messageToSend.includes('ข้อมูลห้อง') || 
-        messageToSend.includes('ห้องประชุมทั้งหมด') || 
-        messageToSend.includes('รายชื่อห้อง') || 
+      const isRoomInfo =
+        messageToSend.includes('ข้อมูลห้อง') ||
+        messageToSend.includes('ห้องประชุมทั้งหมด') ||
+        messageToSend.includes('รายชื่อห้อง') ||
         messageToSend.includes('รายการห้อง');
 
-      const isCarList = 
-        messageToSend.includes('รายการรถ') || 
-        messageToSend.includes('ข้อมูลรถ') || 
+      const isCarList =
+        messageToSend.includes('รายการรถ') ||
+        messageToSend.includes('ข้อมูลรถ') ||
         messageToSend.includes('รถทั้งหมด');
 
-      const isCarType = 
-        messageToSend.includes('ประเภทรถ') || 
+      const isCarType =
+        messageToSend.includes('ประเภทรถ') ||
         messageToSend.includes('ชนิดรถ');
 
       const res = await fetch('/api/chat', {
@@ -92,7 +100,9 @@ export default function ChatbotWidget() {
       const isRoom = Boolean(data.roomUrl) || messageToSend.includes('ห้อง') || data.reply?.includes('ห้องประชุม');
       const isCar = Boolean(data.carUrl) || messageToSend.includes('รถ') || data.reply?.includes('รถยนต์');
 
-      const itemType = isStat
+      const itemType = isGreeting
+        ? 'greeting'
+        : isStat
         ? 'stat'
         : isLocation
         ? 'location'
@@ -210,20 +220,20 @@ export default function ChatbotWidget() {
                         msg.itemType === 'greeting'
                           ? encodeURI('/Mascot ทักทาย.png')
                           : msg.itemType === 'stat'
-                          ? encodeURI('/Mascot รายงานสถิติ.png')
-                          : msg.itemType === 'location'
-                          ? encodeURI('/Mascot สถานที่ ชั้น.png')
-                          : msg.itemType === 'room-info'
-                          ? encodeURI('/Mascot ข้อมูลห้อง.png')
-                          : msg.itemType === 'room'
-                          ? encodeURI('/Mascot จองห้อง.png')
-                          : msg.itemType === 'car-type'
-                          ? encodeURI('/Mascot ประเภทรถ.png')
-                          : msg.itemType === 'car-list'
-                          ? encodeURI('/Mascot รายการรถทั้งหมด.png')
-                          : msg.itemType === 'car'
-                          ? encodeURI('/Mascot จองรถ.png')
-                          : encodeURI('/Mascot ทักทาย.png')
+                            ? encodeURI('/Mascot รายงานสถิติ.png')
+                            : msg.itemType === 'location'
+                              ? encodeURI('/Mascot สถานที่ ชั้น.png')
+                              : msg.itemType === 'room-info'
+                                ? encodeURI('/Mascot ข้อมูลห้อง.png')
+                                : msg.itemType === 'room'
+                                  ? encodeURI('/Mascot จองห้อง.png')
+                                  : msg.itemType === 'car-type'
+                                    ? encodeURI('/Mascot ประเภทรถ.png')
+                                    : msg.itemType === 'car-list'
+                                      ? encodeURI('/Mascot รายการรถทั้งหมด.png')
+                                      : msg.itemType === 'car'
+                                        ? encodeURI('/Mascot จองรถ.png')
+                                        : encodeURI('/Mascot ทักทาย.png')
                       }
                       alt="Bot Avatar"
                       className="w-full h-full object-contain"
