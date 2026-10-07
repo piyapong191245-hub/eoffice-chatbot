@@ -17,7 +17,11 @@ if (!global._mysqlPool) {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    charset: 'utf8mb4'
+    charset: 'utf8mb4',
+    // เพิ่มการตั้งค่า SSL สำหรับ Aiven Cloud
+    ssl: {
+      rejectUnauthorized: false
+    }
   });
 }
 
