@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     const globalIgnored = ['ก', 'ข', 'ค', 'ง', 'ส', 'ม', 'เทส', 'test', '5'];
 
     // ข้อความกรณีไม่พบข้อมูล พร้อมคำแนะนำการพิมพ์
-    const notFoundReply = `ไม่พบข้อมูลที่ตรงกับ "${userMessage}"\n\n💡 **คำแนะนำการพิมพ์:**\n\nพิมพ์คำว่า **"ขอจองห้อง"** หรือ **"ขอจองรถ"**\nพิมพ์คำว่า **"รายการรถ"** หรือ **"ทะเบียนรถ"**\nพิมพ์คำว่า **"ข้อมูลห้อง"** หรือ **"สถานที่"**\nกรุณาพิมพ์ชื่อ-นามสกุลจริง หรือชื่อสถานที่ปลายทางให้ครบถ้วน\nพิมพ์คำว่า **"สถิติ"** เพื่อดูรายงานสรุปยอดการใช้งาน`;
+    const notFoundReply = `ไม่พบข้อมูลที่ตรงกับ "${userMessage}"\n\n💡 **คำแนะนำการพิมพ์:**\n\nพิมพ์คำว่า **"ขอจองห้อง"** หรือ **"ตารางเวลา"**\nพิมพ์คำว่า **"ขอจองรถ"** หรือ **"กระบะ"** / **"รถตู้"**\nพิมพ์คำว่า **"ข้อมูลห้อง"** หรือ **"สถานที่"**\nกรุณาพิมพ์ชื่อ-นามสกุลจริง หรือชื่อสถานที่ปลายทางให้ครบถ้วน\nพิมพ์คำว่า **"สถิติ"** เพื่อดูรายงานสรุปยอดการใช้งาน`;
 
     if (cleanQuery.length > 0 && (cleanQuery.length < 2 || globalIgnored.includes(cleanQuery))) {
       return await sendResponse({ reply: notFoundReply });
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
     const greetingKeywords = ['สวัสดี', 'สวัสดีครับ', 'สวัสดีค่ะ', 'หวัดดี', 'hi', 'hello', 'สอบถาม', 'เริ่ม'];
     if (greetingKeywords.some((kw) => query === kw || query.includes(kw))) {
       return await sendResponse({
-        reply: `สวัสดีครับ! 👋 ผมคือ **PACC e-Office Assistant** ยินดีให้บริการครับ\n\nคุณสามารถพิมพ์สอบถามข้อมูลได้ดังนี้ครับ:\n- **จองห้องประชุม / รถยนต์:** พิมพ์ *"ขอจองห้อง"* หรือ *"ขอจองรถ"*\n- **ค้นหาห้องประชุม:** พิมพ์ชื่อห้อง เช่น *"ห้องประชุม 1"* หรือ *"ขอห้องออนไลน์"*\n- **ค้นหารายการรถ / ค้นหาคิวจองรถ:** พิมพ์ *"รายการรถ"* หรือพิมพ์ชื่อผู้จอง/สถานที่ \n- **ดูสถิติการใช้งาน:** พิมพ์ *"สถิติ"*`
+        reply: `สวัสดีครับ! 👋 ผมคือ **PACC e-Office Assistant** ยินดีให้บริการครับ\n\nคุณสามารถพิมพ์สอบถามข้อมูลได้ดังนี้ครับ:\n- **จองห้องประชุม / รถยนต์:** พิมพ์ *"ขอจองห้อง"* หรือ *"ขอจองรถ"*\n- **ค้นหาห้องประชุม:** พิมพ์ชื่อห้อง เช่น *"ห้อง Command"* หรือ *"ขอห้องออนไลน์"*\n- **ค้นหารายการรถ:** พิมพ์ *"รายการรถ"*, *"กระบะ"* หรือ *"รถตู้"*\n- **ดูสถิติการใช้งาน:** พิมพ์ *"สถิติ"*`
       });
     }
 
@@ -96,17 +96,35 @@ export async function POST(req: Request) {
       });
     }
 
-    const carTypeKeywords = ['ประเภทรถ', 'ชนิดรถ', 'มีรถอะไรบ้าง', 'รถประเภทไหน', 'รถยนต์', 'รถตู้', 'รถกะบะ', 'รถกระบะ', 'รถเก๋ง'];
-    if (carTypeKeywords.some((kw) => query === kw || query.includes(kw))) {
+    // 🟢 แก้ไข: กรองรายการรถยนต์ส่วนกลางให้ได้ 7 คันเป๊ะ (ตัดกระบะหมวด 2ขย และ รถตู้ ออก)
+    const carTypeKeywords = ['ประเภทรถ', 'ชนิดรถ', 'มีรถอะไรบ้าง', 'รถประเภทไหน', 'รถยนต์', 'รถตู้', 'รถกะบะ', 'รถกระบะ', 'กระบะ', 'กะบะ', 'ปิกอัพ', 'pickup', 'รถเก๋ง', 'เก๋ง', 'suv'];
+    if (carTypeKeywords.some((kw) => query.includes(kw))) {
       const carsData = readJsonFile<any[]>(path.join(dataDir, 'cars_info.json'));
       if (carsData) {
         let filteredCars: any[] = [];
+
         if (query.includes('ตู้')) {
-          filteredCars = carsData.filter((c) => (c.type || '').includes('ตู้'));
-        } else if (query.includes('กะบะ') || query.includes('กระบะ')) {
-          filteredCars = carsData.filter((c) => (c.type || '').includes('กะบะ') || (c.type || '').includes('กระบะ'));
-        } else if (query.includes('รถยนต์') || query.includes('เก๋ง')) {
-          filteredCars = carsData.filter((c) => !(c.type || '').includes('ตู้') && !(c.type || '').includes('กะบะ') && !(c.type || '').includes('กระบะ'));
+          filteredCars = carsData.filter((c) => (c.type || '').toLowerCase().includes('ตู้'));
+        } else if (query.includes('กะบะ') || query.includes('กระบะ') || query.includes('ปิกอัพ') || query.includes('pickup')) {
+          filteredCars = carsData.filter((c) => {
+            const license = (c.licensePlate || c.license || '').replace(/\s+/g, '');
+            const carType = (c.type || '').toLowerCase();
+            return license.includes('2ขย') || carType.includes('กะบะ') || carType.includes('กระบะ') || carType.includes('ปิกอัพ') || carType.includes('pickup');
+          });
+        } else if (query.includes('เก๋ง') || query.includes('รถยนต์') || query.includes('suv')) {
+          filteredCars = carsData.filter((c) => {
+            const license = (c.licensePlate || c.license || '').replace(/\s+/g, '').toLowerCase();
+            const carType = (c.type || '').toLowerCase();
+
+            // ยกเว้นรถกระบะ (หมวด 2ขย) และรถตู้
+            const isPickup2Khy = license.includes('2ขย');
+            const isVan = carType.includes('ตู้');
+
+            if (isPickup2Khy || isVan) return false;
+
+            // คืนค่าเฉพาะรถยนต์ส่วนกลาง 7 คัน (หมวด กม / SUV / รถเก๋ง / รถยนต์)
+            return license.includes('กม') || carType.includes('suv') || carType.includes('เก๋ง') || carType.includes('รถยนต์');
+          });
         }
 
         if (filteredCars.length > 0) {
@@ -181,7 +199,11 @@ export async function POST(req: Request) {
     if (roomsData) {
       const isExcludeZoom = excludeZoomKeywords.some((kw) => query.includes(kw));
 
-      let matchedRoom = roomsData.find((room) => room.name.toLowerCase().trim() === query);
+      let matchedRoom = roomsData.find((room) => {
+        const roomName = (room.name || '').toLowerCase().replace(/\s+/g, '');
+        const searchKey = query.replace(/\s+/g, '');
+        return roomName.includes(searchKey) || searchKey.includes(roomName);
+      });
 
       if (!matchedRoom) {
         const isRoomContext = ['ห้อง', 'room', 'ประชุม'].some(k => query.includes(k)) || /^\d+$/.test(query);
@@ -302,15 +324,23 @@ export async function POST(req: Request) {
     }
 
     // -------------------------------------------------------------
-    // 3. Booking Quick Link
+    // 3. Booking Quick Link & Schedule
     // -------------------------------------------------------------
+    const scheduleKeywords = ['ตารางเวลา', 'ตารางการจอง', 'เช็คห้องว่าง', 'ห้องว่าง', 'ปฏิทิน'];
+    if (scheduleKeywords.some((kw) => query.includes(kw))) {
+      return await sendResponse({
+        reply: "📅 **ระบบตารางเวลาและการจองห้องประชุม**\n\nท่านสามารถคลิกปุ่มด้านล่างเพื่อเข้าสู่หน้าปฏิทิน/ตารางเวลา เพื่อเช็กสถานะห้องว่างและทำการจองห้องประชุมได้ทันทีครับ",
+        actionUrl: "https://pacc.eoffice.go.th/room-booking/home"
+      });
+    }
+
     const bookingKeywords = ['จองห้อง', 'ขอจองห้อง', 'ต้องการจอง', 'จองห้องประชุม', 'ขอห้อง', 'booking', 'จอง'];
     if (bookingKeywords.some((kw) => query.includes(kw))) {
       const isExcludeZoom = excludeZoomKeywords.some((kw) => query.includes(kw));
       if (!isExcludeZoom) {
         return await sendResponse({
           reply: "กำลังนำท่านไปยังระบบจองห้องประชุม...",
-          actionUrl: "https://pacc.eoffice.go.th/room-booking/booking"
+          actionUrl: "https://pacc.eoffice.go.th/room-booking/home"
         });
       }
     }
@@ -371,27 +401,31 @@ export async function POST(req: Request) {
         });
       }
 
-      const statPath = path.join(dataDir, 'room_stat.xlsx');
-      if (fs.existsSync(statPath) && !query.includes('วันที่')) {
-        const fileBuffer = fs.readFileSync(statPath);
-        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const statData: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      try {
+        const statPath = path.join(dataDir, 'room_stat.xlsx');
+        if (fs.existsSync(statPath) && !query.includes('วันที่')) {
+          const fileBuffer = fs.readFileSync(statPath);
+          const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+          const sheetName = workbook.SheetNames[0];
+          const statData: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-        if (statData.length > 0) {
-          const row = statData[0];
-          const val2568 = row['2568'] || row['__EMPTY'] || Object.values(row)[1] || '1,359';
-          const val2569 = row['2569'] || row['__EMPTY_1'] || Object.values(row)[2] || '1,926';
+          if (statData.length > 0) {
+            const row = statData[0];
+            const val2568 = row['2568'] || row['__EMPTY'] || Object.values(row)[1] || '1,359';
+            const val2569 = row['2569'] || row['__EMPTY_1'] || Object.values(row)[2] || '1,926';
 
-          return await sendResponse({
-            reply: `📊 **รายงานสถิติการใช้งานห้องประชุม สำนักงาน ป.ป.ท.**\n\n- **ปี 2568:** มีการใช้งานทั้งหมด **${val2568}** ครั้ง\n- **ปี 2569:** มีการใช้งานทั้งหมด **${val2569}** ครั้ง\n- **สถิติขอยกเลิกใช้งาน (18 ส.ค. 69 - 31 ธ.ค. 70):** **15** รายการ\n- **สถิติไม่เข้าใช้งาน (31 ธ.ค. 67 - 31 ธ.ค. 70):** **29** ครั้ง\n\n💡 ต้องการดูรายการจองเฉพาะห้องหรือค้นหาชื่อผู้จอง สามารถพิมพ์ค้นหาได้เลยครับ`
-          });
+            return await sendResponse({
+              reply: `📊 **รายงานสถิติการใช้งานห้องประชุม สำนักงาน ป.ป.ท.**\n\n- **ปี 2568:** มีการใช้งานทั้งหมด **${val2568}** ครั้ง\n- **ปี 2569:** มีการใช้งานทั้งหมด **${val2569}** ครั้ง\n- **สถิติขอยกเลิกใช้งาน (18 ส.ค. 69 - 31 ธ.ค. 70):** **15** รายการ\n- **สถิติไม่เข้าใช้งาน (31 ธ.ค. 67 - 31 ธ.ค. 70):** **29** ครั้ง\n\n💡 ต้องการดูรายการจองเฉพาะห้องหรือค้นหาชื่อผู้จอง สามารถพิมพ์ค้นหาได้เลยครับ`
+            });
+          }
         }
+      } catch (excelErr) {
+        console.error("Excel Read Error:", excelErr);
       }
     }
 
     // -------------------------------------------------------------
-    // 6. Database Search (MariaDB Query - ปรับหัวข้อสรุปเป็นตัวหนา)
+    // 6. Database Search (MariaDB Query)
     // -------------------------------------------------------------
     const ignoredKeywords = [
       'ใช้งาน', 'ใช้', 'การใช้งาน', 'ระบบ', 'ทดสอบ', 'test', 'ขอใช้งาน', 'เปิดใช้งาน',
@@ -503,7 +537,7 @@ export async function POST(req: Request) {
         console.error("MariaDB Room Booking Query Error:", dbBookingErr);
       }
 
-      // 6.3 รวมผลลัพธ์พร้อมปรับหัวข้อสรุปให้เป็นตัวหนา
+      // 6.3 รวมผลลัพธ์
       if (carCount > 0 || roomCount > 0) {
         let responseParts: string[] = [];
 
@@ -520,7 +554,7 @@ export async function POST(req: Request) {
     }
 
     // -------------------------------------------------------------
-    // 7. Fallback Response (กรณีพิมพ์ไม่ครบถ้วน หรือพิมพ์คำที่ไม่มีในระบบ)
+    // 7. Fallback Response
     // -------------------------------------------------------------
     return await sendResponse({ reply: notFoundReply });
 
