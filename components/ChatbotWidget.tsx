@@ -144,9 +144,9 @@ export default function ChatbotWidget() {
           title="เปิดกล่องข้อความ"
         >
           <img
-            src="/Mascot.png"
+            src="/Mascot 3.png"
             alt="Eoffice Mascot"
-            className="w-50 h-50 sm:w-50 sm:h-50 object-contain filter drop-shadow-xl"
+            className="w-50 h-50 sm:w-45 sm:h-45 object-contain filter drop-shadow-xl"
           />
         </button>
       )}
