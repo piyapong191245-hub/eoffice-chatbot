@@ -24,7 +24,6 @@ export async function POST(req: Request) {
 
   const sendResponse = async (data: { reply: string; actionUrl?: string; carUrl?: string; roomUrl?: string }, status = 200) => {
     if (userMessage) {
-      // ดึงเวลาปัจจุบันตาม Timezone ประเทศไทย (Asia/Bangkok) โดยตรง
       const options: Intl.DateTimeFormatOptions = {
         timeZone: 'Asia/Bangkok',
         year: 'numeric',
@@ -36,10 +35,9 @@ export async function POST(req: Request) {
         hour12: false
       };
 
-      const formatter = new Intl.DateTimeFormat('en-CA', options); // แปลงเป็น YYYY-MM-DD HH:mm:ss
+      const formatter = new Intl.DateTimeFormat('en-CA', options);
       const nowString = formatter.format(new Date()).replace(',', '');
 
-      // 💡 แก้ไข: ใส่ try-catch + await เพื่อให้รอ MariaDB บันทึกสำเร็จจริงก่อนส่ง Response
       try {
         await pool.execute(
           'INSERT INTO chat_logs (user_message, bot_reply, created_at) VALUES (?, ?, ?)',
@@ -60,10 +58,11 @@ export async function POST(req: Request) {
     const cleanQuery = query;
     const globalIgnored = ['ก', 'ข', 'ค', 'ง', 'ส', 'ม', 'เทส', 'test', '5'];
 
+    // ข้อความกรณีไม่พบข้อมูล พร้อมคำแนะนำการพิมพ์
+    const notFoundReply = `ไม่พบข้อมูลที่ตรงกับ "${userMessage}"\n\n💡 **คำแนะนำการพิมพ์:**\n\nพิมพ์คำว่า **"ขอจองห้อง"** หรือ **"ขอจองรถ"**\nพิมพ์คำว่า **"รายการรถ"** หรือ **"ทะเบียนรถ"**\nพิมพ์คำว่า **"ข้อมูลห้อง"** หรือ **"สถานที่"**\nกรุณาพิมพ์ชื่อ-นามสกุลจริง หรือชื่อสถานที่ปลายทางให้ครบถ้วน\nพิมพ์คำว่า **"สถิติ"** เพื่อดูรายงานสรุปยอดการใช้งาน`;
+
     if (cleanQuery.length > 0 && (cleanQuery.length < 2 || globalIgnored.includes(cleanQuery))) {
-      return await sendResponse({
-        reply: `ไม่พบข้อมูลที่ตรงกับ "${userMessage}" กรุณาระบุคำค้นหาให้ชัดเจนยิ่งขึ้นครับ`
-      });
+      return await sendResponse({ reply: notFoundReply });
     }
 
     const dataDir = path.join(process.cwd(), 'public', 'data');
@@ -73,7 +72,7 @@ export async function POST(req: Request) {
 
     const formatImageUrl = (url?: string) => {
       if (!url) return '';
-      return encodeURI(url).replace(/\(/g, '%28').replace(/\)/g, '%29');
+      return encodeURI(url).replace(/\(/g, '\%28').replace(/\)/g, '%29');
     };
 
     // -------------------------------------------------------------
@@ -82,7 +81,7 @@ export async function POST(req: Request) {
     const greetingKeywords = ['สวัสดี', 'สวัสดีครับ', 'สวัสดีค่ะ', 'หวัดดี', 'hi', 'hello', 'สอบถาม', 'เริ่ม'];
     if (greetingKeywords.some((kw) => query === kw || query.includes(kw))) {
       return await sendResponse({
-        reply: `สวัสดีครับ! 👋 ผมคือ **PACC e-Office Assistant** ยินดีให้บริการครับ\n\nคุณสามารถพิมพ์สอบถามข้อมูลได้ดังนี้ครับ:\n- **จองห้องประชุม / รถยนต์:** พิมพ์ *"ขอจองห้อง"* หรือ *"ขอจองรถ"*\n- **ค้นหาห้องประชุม:** พิมพ์ชื่อห้อง เช่น *"ห้องประชุม 1"* หรือ *"ขอห้องออนไลน์"*\n- **ค้นหารายการรถ:** พิมพ์ *"รายการรถ"* หรือพิมพ์เลขทะเบียนรถ\n- **ดูสถิติการใช้งาน:** พิมพ์ *"สถิติ"*`
+        reply: `สวัสดีครับ! 👋 ผมคือ **PACC e-Office Assistant** ยินดีให้บริการครับ\n\nคุณสามารถพิมพ์สอบถามข้อมูลได้ดังนี้ครับ:\n- **จองห้องประชุม / รถยนต์:** พิมพ์ *"ขอจองห้อง"* หรือ *"ขอจองรถ"*\n- **ค้นหาห้องประชุม:** พิมพ์ชื่อห้อง เช่น *"ห้องประชุม 1"* หรือ *"ขอห้องออนไลน์"*\n- **ค้นหารายการรถ / ค้นหาคิวจองรถ:** พิมพ์ *"รายการรถ"* หรือพิมพ์ชื่อผู้จอง/สถานที่ \n- **ดูสถิติการใช้งาน:** พิมพ์ *"สถิติ"*`
       });
     }
 
@@ -182,6 +181,35 @@ export async function POST(req: Request) {
     if (roomsData) {
       const isExcludeZoom = excludeZoomKeywords.some((kw) => query.includes(kw));
 
+      let matchedRoom = roomsData.find((room) => room.name.toLowerCase().trim() === query);
+
+      if (!matchedRoom) {
+        const isRoomContext = ['ห้อง', 'room', 'ประชุม'].some(k => query.includes(k)) || /^\d+$/.test(query);
+        const userNumMatch = query.match(/\d+/);
+
+        if (isRoomContext && userNumMatch) {
+          const userNum = userNumMatch[0];
+          matchedRoom = roomsData.find((room) => {
+            const roomNumMatch = room.name.toLowerCase().match(/\d+/);
+            return roomNumMatch ? roomNumMatch[0] === userNum : false;
+          });
+        }
+      }
+
+      if (matchedRoom) {
+        const imageUrl = formatImageUrl(matchedRoom.image);
+        const imgMarkdown = imageUrl ? `![${matchedRoom.name}](${imageUrl})\n\n` : '';
+        let roomId = matchedRoom.id || matchedRoom.roomId;
+        if (!roomId) {
+          roomId = matchedRoom.name.includes('คณะกรรมการ') ? '81' : '10';
+        }
+
+        return await sendResponse({
+          reply: `🚪 **${matchedRoom.name}**\n\n${imgMarkdown}- **สถานที่:** ${matchedRoom.location}\n- **รองรับ:** ${matchedRoom.capacity} คน\n- **สถานะ:** ${matchedRoom.status}`,
+          roomUrl: `https://pacc.eoffice.go.th/room-booking/room/${roomId}`
+        });
+      }
+
       const onlineKeywords = ['ระบบการประชุมออนไลน์', 'ประชุมออนไลน์', 'ออนไลน์', 'zoom', 'ขอห้องออนไลน์', 'ขอห้อง zoom'];
       const isOnlineQuery = onlineKeywords.some((kw) => query.includes(kw));
       const hasSpecificRoomNumber = /\d+/.test(query);
@@ -238,34 +266,6 @@ export async function POST(req: Request) {
             reply: `🏢 **รายการ${title}:**\n\n${roomList}\n\n💡 พิมพ์ชื่อห้องเพื่อดูรายละเอียดและสแกน QR Code ได้เลยครับ`
           });
         }
-      }
-
-      let matchedRoom = roomsData.find((room) => room.name.toLowerCase().trim() === query);
-      if (!matchedRoom) {
-        const isRoomContext = ['ห้อง', 'room', 'ประชุม'].some(k => query.includes(k)) || /^\d+$/.test(query);
-        const userNumMatch = query.match(/\d+/);
-
-        if (isRoomContext && userNumMatch) {
-          const userNum = userNumMatch[0];
-          matchedRoom = roomsData.find((room) => {
-            const roomNumMatch = room.name.toLowerCase().match(/\d+/);
-            return roomNumMatch ? roomNumMatch[0] === userNum : false;
-          });
-        }
-      }
-
-      if (matchedRoom) {
-        const imageUrl = formatImageUrl(matchedRoom.image);
-        const imgMarkdown = imageUrl ? `![${matchedRoom.name}](${imageUrl})\n\n` : '';
-        let roomId = matchedRoom.id || matchedRoom.roomId;
-        if (!roomId) {
-          roomId = matchedRoom.name.includes('คณะกรรมการ') ? '81' : '10';
-        }
-
-        return await sendResponse({
-          reply: `🚪 **${matchedRoom.name}**\n\n${imgMarkdown}- **สถานที่:** ${matchedRoom.location}\n- **รองรับ:** ${matchedRoom.capacity} คน\n- **สถานะ:** ${matchedRoom.status}`,
-          roomUrl: `https://pacc.eoffice.go.th/room-booking/room/${roomId}`
-        });
       }
 
       if (excludeZoomKeywords.some((kw) => query === kw)) {
@@ -391,9 +391,8 @@ export async function POST(req: Request) {
     }
 
     // -------------------------------------------------------------
-    // 6. Database Search (MariaDB Query)
+    // 6. Database Search (MariaDB Query - ปรับหัวข้อสรุปเป็นตัวหนา)
     // -------------------------------------------------------------
-    const isCarSearch = ['รถ', 'รถยนต์', 'รถตู้', 'ทะเบียน', 'กระบะ', 'กะบะ'].some(kw => query.includes(kw));
     const ignoredKeywords = [
       'ใช้งาน', 'ใช้', 'การใช้งาน', 'ระบบ', 'ทดสอบ', 'test', 'ขอใช้งาน', 'เปิดใช้งาน',
       'สถานะ', 'เช็คสถานะ', 'ป.ป.ท.', 'สำนักงาน', 'ตรวจสอบสถานะ', 'เทส', 'เรื่อง', 'วันที่',
@@ -402,25 +401,74 @@ export async function POST(req: Request) {
     ];
 
     const isIgnoredQuery = ignoredKeywords.some(kw => query === kw);
-    if (!isCarSearch && query.length >= 10 && !isIgnoredQuery) {
-      try {
-        const cleanQuery = query.trim();
-        const formattedQuery = cleanQuery.replace(/\s+/g, '%');
-        const searchPattern = `%${formattedQuery}%`;
-        const exactQueryNoSpace = cleanQuery.replace(/\s+/g, '');
+    const cleanQueryText = query.trim();
+    const exactQueryNoSpace = cleanQueryText.replace(/\s+/g, '');
 
-        const [rows]: any = await pool.query(`
+    if (!isIgnoredQuery) {
+      let carCount = 0;
+      let roomCount = 0;
+      let carResultsList: string[] = [];
+      let roomResultsList: string[] = [];
+
+      // 6.1 ค้นหาข้อมูลการจองรถยนต์
+      try {
+        const [carRows]: any = await pool.query(`
+          SELECT res_id, fullname, res_datestart, res_dateend, res_endlocat, res_objective, text_status 
+          FROM vehicle_bookings 
+          WHERE REPLACE(fullname, ' ', '') = ? 
+             OR REPLACE(owner_fullname, ' ', '') = ? 
+             OR res_endlocat = ? 
+             OR res_objective = ?
+          ORDER BY res_datestart DESC 
+          LIMIT 5
+        `, [exactQueryNoSpace, exactQueryNoSpace, cleanQueryText, cleanQueryText]);
+
+        if (Array.isArray(carRows) && carRows.length > 0) {
+          carCount = carRows.length;
+          carResultsList = carRows.map((item: any) => {
+            const startDate = new Date(item.res_datestart);
+            const endDate = new Date(item.res_dateend);
+
+            const formattedDate = !isNaN(startDate.getTime())
+              ? startDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })
+              : '-';
+
+            const startTimeStr = !isNaN(startDate.getTime())
+              ? startDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })
+              : '';
+            const endTimeStr = !isNaN(endDate.getTime())
+              ? endDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })
+              : '';
+
+            const timeDisplay = (startTimeStr && endTimeStr) ? ` (${startTimeStr} - ${endTimeStr} น.)` : '';
+
+            return `**รายการจองรถ #${item.res_id}**\n\n` +
+              `**วันที่:** ${formattedDate}${timeDisplay}\n\n` +
+              `**ปลายทาง:** ${item.res_endlocat || '-'}\n\n` +
+              `**วัตถุประสงค์:** ${item.res_objective || '-'}\n\n` +
+              `**ผู้จอง:** ${item.fullname || '-'}\n\n` +
+              `**สถานะ:** ${item.text_status || '-'}`;
+          });
+        }
+      } catch (dbCarErr) {
+        console.error("MariaDB Vehicle Booking Query Error:", dbCarErr);
+      }
+
+      // 6.2 ค้นหาข้อมูลการจองห้องประชุม
+      try {
+        const [roomRows]: any = await pool.query(`
           SELECT room_name, booker_name, start_time, end_time, purpose, status 
           FROM room_bookings 
-          WHERE room_name LIKE ? 
-             OR purpose LIKE ? 
+          WHERE room_name = ? 
+             OR purpose = ? 
              OR REPLACE(booker_name, ' ', '') = ?
           ORDER BY start_time DESC
           LIMIT 5
-        `, [searchPattern, searchPattern, exactQueryNoSpace]);
+        `, [cleanQueryText, cleanQueryText, exactQueryNoSpace]);
 
-        if (Array.isArray(rows) && rows.length > 0) {
-          const resultText = rows.map((item: any, idx: number) => {
+        if (Array.isArray(roomRows) && roomRows.length > 0) {
+          roomCount = roomRows.length;
+          roomResultsList = roomRows.map((item: any) => {
             const startDate = new Date(item.start_time);
             const endDate = new Date(item.end_time);
 
@@ -444,28 +492,37 @@ export async function POST(req: Request) {
               statusText = 'รออนุมัติ';
             }
 
-            return `${idx + 1}. **${item.room_name}**\n` +
-              `   - **วันที่:** ${formattedDate}${timeDisplay}\n` +
-              `   - **เรื่อง:** ${item.purpose || '-'}\n` +
-              `   - **ผู้จอง:** ${item.booker_name || '-'}\n` +
-              `   - **สถานะ:** ${statusText}`;
-          }).join('\n\n---\n\n');
-
-          return await sendResponse({
-            reply: `พบข้อมูลการจองห้องประชุมในระบบ (${rows.length} รายการ):\n\n${resultText}`
+            return `**${item.room_name}**\n\n` +
+              `**วันที่:** ${formattedDate}${timeDisplay}\n\n` +
+              `**เรื่อง:** ${item.purpose || '-'}\n\n` +
+              `**ผู้จอง:** ${item.booker_name || '-'}\n\n` +
+              `**สถานะ:** ${statusText}`;
           });
         }
       } catch (dbBookingErr) {
         console.error("MariaDB Room Booking Query Error:", dbBookingErr);
       }
+
+      // 6.3 รวมผลลัพธ์พร้อมปรับหัวข้อสรุปให้เป็นตัวหนา
+      if (carCount > 0 || roomCount > 0) {
+        let responseParts: string[] = [];
+
+        if (roomCount > 0) {
+          responseParts.push(`**พบข้อมูลการจองห้องประชุมในระบบ (${roomCount} รายการ):**\n\n` + roomResultsList.join('\n\n---\n\n'));
+        }
+
+        if (carCount > 0) {
+          responseParts.push(`**พบข้อมูลการจองรถยนต์ในระบบ (${carCount} รายการ):**\n\n` + carResultsList.join('\n\n---\n\n'));
+        }
+
+        return await sendResponse({ reply: responseParts.join('\n\n---\n\n') });
+      }
     }
 
     // -------------------------------------------------------------
-    // 7. Fallback Response
+    // 7. Fallback Response (กรณีพิมพ์ไม่ครบถ้วน หรือพิมพ์คำที่ไม่มีในระบบ)
     // -------------------------------------------------------------
-    return await sendResponse({
-      reply: `ไม่พบข้อมูลที่ตรงกับ "${userMessage}"\n\n💡 **คำแนะนำการพิมพ์:**\n\n- พิมพ์คำว่า **"ขอจองห้อง"** หรือ **"ขอจองรถ"**\n- พิมพ์คำว่า **"รายการรถ"** หรือ **"ทะเบียนรถ"**\n- พิมพ์คำว่า **"ข้อมูลห้อง"** หรือ **"สถานที่"**\n- กรุณาพิมพ์ชื่อ-นามสกุลจริงให้ครบถ้วน\n- พิมพ์คำว่า **"สถิติ"** เพื่อดูรายงานสรุปยอดการใช้งาน`
-    });
+    return await sendResponse({ reply: notFoundReply });
 
   } catch (error: any) {
     return await sendResponse({ reply: "เกิดข้อผิดพลาดในการประมวลผลข้อมูล" }, 500);

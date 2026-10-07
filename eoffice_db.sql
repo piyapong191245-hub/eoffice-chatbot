@@ -138,3 +138,39 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-09-11 13:29:45
+
+-- ------------------------------------------------------
+-- Table structure for table `vehicles` (ตารางเก็บข้อมูลยานพาหนะ)
+-- ------------------------------------------------------
+DROP TABLE IF EXISTS `vehicles`;
+CREATE TABLE `vehicles` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `license_plate` varchar(50) NOT NULL COMMENT 'เลขทะเบียนรถ เช่น 2ขย1132 กทม',
+  `vehicle_type` varchar(50) NOT NULL COMMENT 'ประเภทรถ เช่น รถนั่งส่วนบุคคล, รถตู้, SUV',
+  `capacity` int(11) DEFAULT 4 COMMENT 'จำนวนที่นั่งรองรับ',
+  `image_url` varchar(255) DEFAULT NULL COMMENT 'พาธรูปภาพรถ เช่น /images/cars/2ขย1132 กทม.jpg',
+  `caretaker` varchar(100) DEFAULT '-' COMMENT 'ผู้ดูแลรถ',
+  `status` varchar(20) DEFAULT 'ใช้งาน' COMMENT 'สถานะความพร้อมใช้งาน',
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `license_plate` (`license_plate`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- ------------------------------------------------------
+-- Table structure for table `vehicle_bookings` (ตารางเก็บประวัติการจองรถ)
+-- ------------------------------------------------------
+DROP TABLE IF EXISTS `vehicle_bookings`;
+CREATE TABLE `vehicle_bookings` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `vehicle_id` int(11) NOT NULL,
+  `booker_name` varchar(100) NOT NULL COMMENT 'ชื่อผู้ขอใช้รถ',
+  `purpose` text DEFAULT NULL COMMENT 'วัตถุประสงค์/ภารกิจ',
+  `destination` varchar(255) DEFAULT NULL COMMENT 'สถานที่ปลายทาง',
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `status` varchar(20) DEFAULT 'approved' COMMENT 'สถานะ: pending, approved, cancelled',
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `fk_vehicle_id` (`vehicle_id`),
+  CONSTRAINT `fk_vehicle_id` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
