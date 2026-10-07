@@ -136,11 +136,11 @@ export default function ChatbotWidget() {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 font-sans">
+    <div className="fixed bottom-5 right-5 z-50 font-sans pointer-events-none">
       {(!isOpen || isMinimized) && (
         <button
           onClick={() => { setIsOpen(true); setIsMinimized(false); }}
-          className="transition-all transform hover:scale-110 cursor-pointer drop-shadow-2xl flex items-center justify-center focus:outline-none"
+          className="pointer-events-auto transition-all transform hover:scale-110 cursor-pointer drop-shadow-2xl flex items-center justify-center focus:outline-none"
           title="เปิดกล่องข้อความ"
         >
           <img
@@ -152,7 +152,7 @@ export default function ChatbotWidget() {
       )}
 
       {isOpen && !isMinimized && (
-        <div className="w-87.5 sm:w-97.5 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden h-130 transition-all duration-300">
+        <div className="pointer-events-auto w-87.5 sm:w-97.5 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden h-130 transition-all duration-300">
           <div className="bg-linear-to-r from-blue-950 via-blue-900 to-blue-800 text-white p-3.5 flex justify-between items-center shadow-md select-none h-14">
             <div
               className="flex items-center gap-2.5 cursor-pointer flex-1"
