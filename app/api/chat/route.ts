@@ -66,9 +66,6 @@ export async function POST(req: Request) {
     }
 
     const dataDir = path.join(process.cwd(), 'public', 'data');
-    if (!fs.existsSync(dataDir)) {
-      return await sendResponse({ reply: "ไม่พบโฟลเดอร์ public/data/" });
-    }
 
     const formatImageUrl = (url?: string) => {
       if (!url) return '';
@@ -81,7 +78,18 @@ export async function POST(req: Request) {
     const greetingKeywords = ['สวัสดี', 'สวัสดีครับ', 'สวัสดีค่ะ', 'หวัดดี', 'hi', 'hello', 'สอบถาม', 'เริ่ม'];
     if (greetingKeywords.some((kw) => query === kw || query.includes(kw))) {
       return await sendResponse({
-        reply: `สวัสดีครับ! 👋 ผมคือ **PACC e-Office Assistant** ยินดีให้บริการครับ\n\nคุณสามารถพิมพ์สอบถามข้อมูลได้ดังนี้ครับ:\n- **จองห้องประชุม / รถยนต์:** พิมพ์ *"ขอจองห้อง"* หรือ *"ขอจองรถ"*\n- **ค้นหาห้องประชุม:** พิมพ์ชื่อห้อง เช่น *"ห้อง Command"* หรือ *"ขอห้องออนไลน์"*\n- **ค้นหารายการรถ:** พิมพ์ *"รายการรถ"*, *"กระบะ"* หรือ *"รถตู้"*\n- **ดูสถิติการใช้งาน:** พิมพ์ *"สถิติ"*`
+        reply: `สวัสดีครับ! 👋 ผมคือ **PACC e-Office Assistant** ยินดีให้บริการครับ\n\nคุณสามารถพิมพ์สอบถามข้อมูลได้ดังนี้ครับ:\n**จองห้องประชุม / รถยนต์:** พิมพ์ *"ขอจองห้อง"* หรือ *"ขอจองรถ"*\n**ค้นหาห้องประชุม:** พิมพ์ชื่อห้อง เช่น *"ห้อง Command"* หรือ *"ขอห้องออนไลน์"*\n**ค้นหารายการรถ:** พิมพ์ *"รายการรถ"*, *"กระบะ"* หรือ *"รถตู้"*\n**ดูสถิติการใช้งาน:** พิมพ์ *"สถิติ"*`
+      });
+    }
+
+    // -------------------------------------------------------------
+    // 0.5 Real-time Today's Schedule (เด้งเปิดหน้าตารางเวลา)
+    // -------------------------------------------------------------
+    const todayScheduleKeywords = ['ตารางจองวันนี้', 'ตารางวันนี้', 'การจองวันนี้', 'ขอตารางจองวันนี้'];
+    if (todayScheduleKeywords.some((kw) => query.includes(kw))) {
+      return await sendResponse({
+        reply: "กำลังนำท่านไปยังหน้าตารางเวลาการจองห้องประชุม...",
+        actionUrl: "https://pacc.eoffice.go.th/room-booking/home"
       });
     }
 
@@ -96,7 +104,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // 🟢 แก้ไข: กรองรายการรถยนต์ส่วนกลางให้ได้ 7 คันเป๊ะ (ตัดกระบะหมวด 2ขย และ รถตู้ ออก)
     const carTypeKeywords = ['ประเภทรถ', 'ชนิดรถ', 'มีรถอะไรบ้าง', 'รถประเภทไหน', 'รถยนต์', 'รถตู้', 'รถกะบะ', 'รถกระบะ', 'กระบะ', 'กะบะ', 'ปิกอัพ', 'pickup', 'รถเก๋ง', 'เก๋ง', 'suv'];
     if (carTypeKeywords.some((kw) => query.includes(kw))) {
       const carsData = readJsonFile<any[]>(path.join(dataDir, 'cars_info.json'));
@@ -116,13 +123,10 @@ export async function POST(req: Request) {
             const license = (c.licensePlate || c.license || '').replace(/\s+/g, '').toLowerCase();
             const carType = (c.type || '').toLowerCase();
 
-            // ยกเว้นรถกระบะ (หมวด 2ขย) และรถตู้
             const isPickup2Khy = license.includes('2ขย');
             const isVan = carType.includes('ตู้');
 
             if (isPickup2Khy || isVan) return false;
-
-            // คืนค่าเฉพาะรถยนต์ส่วนกลาง 7 คัน (หมวด กม / SUV / รถเก๋ง / รถยนต์)
             return license.includes('กม') || carType.includes('suv') || carType.includes('เก๋ง') || carType.includes('รถยนต์');
           });
         }
@@ -131,7 +135,7 @@ export async function POST(req: Request) {
           const carList = filteredCars.map((car) => {
             const imageUrl = formatImageUrl(car.image);
             const imgMarkdown = imageUrl ? `![${car.licensePlate || car.license}](${imageUrl})\n` : '';
-            return `### 🚗 **ทะเบียน: ${car.licensePlate || car.license}**\n${imgMarkdown}- **ประเภท:** ${car.type || '-'}\n- **รองรับ:** ${car.capacity} ที่นั่ง\n- **ผู้ดูแล:** ${car.caretaker || '-'}\n- **สถานะ:** ${car.status}`;
+            return `### 🚗 **ทะเบียน: ${car.licensePlate || car.license}**\n${imgMarkdown}**ประเภท:** ${car.type || '-'}\n**รองรับ:** ${car.capacity} ที่นั่ง\n**ผู้ดูแล:** ${car.caretaker || '-'}\n**สถานะ:** ${car.status}`;
           }).join('\n\n---\n\n');
 
           return await sendResponse({
@@ -163,7 +167,7 @@ export async function POST(req: Request) {
         const carId = matchedCar.id || matchedCar.carId || matchedCar.licensePlate || matchedCar.license;
 
         return await sendResponse({
-          reply: `🚗 **ข้อมูลรถยนต์ส่วนกลาง:**\n\n${imgMarkdown}- **ทะเบียน:** ${matchedCar.licensePlate || matchedCar.license}\n- **ประเภท:** ${matchedCar.type || '-'}\n- **จำนวนที่นั่ง:** รองรับ ${matchedCar.capacity} ที่นั่ง\n- **ผู้ดูแลรถ:** ${matchedCar.caretaker || '-'}\n- **สถานะ:** ${matchedCar.status}\n\n💡 สามารถสแกน QR Code เพื่อดูรายละเอียดเพิ่มเติมได้ครับ`,
+          reply: `🚗 **ข้อมูลรถยนต์ส่วนกลาง:**\n\n${imgMarkdown}**ทะเบียน:** ${matchedCar.licensePlate || matchedCar.license}\n**ประเภท:** ${matchedCar.type || '-'}\n**จำนวนที่นั่ง:** รองรับ ${matchedCar.capacity} ที่นั่ง\n**ผู้ดูแลรถ:** ${matchedCar.caretaker || '-'}\n**สถานะ:** ${matchedCar.status}\n\n💡 สามารถสแกน QR Code เพื่อดูรายละเอียดเพิ่มเติมได้ครับ`,
           carUrl: `https://pacc.eoffice.go.th/car-reservation/car_detail/${encodeURIComponent(carId)}`
         });
       }
@@ -173,7 +177,7 @@ export async function POST(req: Request) {
         const carsList = carsData.map((car) => {
           const imageUrl = formatImageUrl(car.image);
           const imgMarkdown = imageUrl ? `![${car.licensePlate || car.license}](${imageUrl})\n` : '';
-          return `### 🚗 **ทะเบียน: ${car.licensePlate || car.license || '-'}**\n${imgMarkdown}- **ประเภท:** ${car.type || '-'}\n- **รองรับ:** ${car.capacity} ที่นั่ง\n- **ผู้ดูแล:** ${car.caretaker || '-'}\n- **สถานะ:** ${car.status}`;
+          return `### 🚗 **ทะเบียน: ${car.licensePlate || car.license || '-'}**\n${imgMarkdown}**ประเภท:** ${car.type || '-'}\n**รองรับ:** ${car.capacity} ที่นั่ง\n**ผู้ดูแล:** ${car.caretaker || '-'}\n**สถานะ:** ${car.status}`;
         }).join('\n\n---\n\n');
 
         return await sendResponse({
@@ -227,7 +231,7 @@ export async function POST(req: Request) {
         }
 
         return await sendResponse({
-          reply: `🚪 **${matchedRoom.name}**\n\n${imgMarkdown}- **สถานที่:** ${matchedRoom.location}\n- **รองรับ:** ${matchedRoom.capacity} คน\n- **สถานะ:** ${matchedRoom.status}`,
+          reply: `🚪 **${matchedRoom.name}**\n\n${imgMarkdown}**สถานที่:** ${matchedRoom.location}\n**รองรับ:** ${matchedRoom.capacity} คน\n**สถานะ:** ${matchedRoom.status}`,
           roomUrl: `https://pacc.eoffice.go.th/room-booking/room/${roomId}`
         });
       }
@@ -247,7 +251,7 @@ export async function POST(req: Request) {
           const roomList = onlineRooms.map((room) => {
             const imageUrl = formatImageUrl(room.image);
             const imgMarkdown = imageUrl ? `![${room.name}](${imageUrl})\n` : '';
-            return `### 🚪 **${room.name}**\n${imgMarkdown}- **สถานที่:** ${room.location}\n- **รองรับ:** ${room.capacity} คน\n- **สถานะ:** ${room.status}`;
+            return `### 🚪 **${room.name}**\n${imgMarkdown}**สถานที่:** ${room.location}\n**รองรับ:** ${room.capacity} คน\n**สถานะ:** ${room.status}`;
           }).join('\n\n---\n\n');
 
           return await sendResponse({
@@ -277,7 +281,7 @@ export async function POST(req: Request) {
           const roomList = filteredRooms.map((room) => {
             const imageUrl = formatImageUrl(room.image);
             const imgMarkdown = imageUrl ? `![${room.name}](${imageUrl})\n` : '';
-            return `### 🚪 **${room.name}**\n${imgMarkdown}- **สถานที่:** ${room.location}\n- **รองรับ:** ${room.capacity} คน\n- **สถานะ:** ${room.status}`;
+            return `### 🚪 **${room.name}**\n${imgMarkdown}**สถานที่:** ${room.location}\n**รองรับ:** ${room.capacity} คน\n**สถานะ:** ${room.status}`;
           }).join('\n\n---\n\n');
 
           const title = isSmallRoomQuery
@@ -301,7 +305,7 @@ export async function POST(req: Request) {
           const roomList = onsiteRooms.map((room) => {
             const imageUrl = formatImageUrl(room.image);
             const imgMarkdown = imageUrl ? `![${room.name}](${imageUrl})\n` : '';
-            return `### 🚪 **${room.name}**\n${imgMarkdown}- **สถานที่:** ${room.location}\n- **รองรับ:** ${room.capacity} คน\n- **สถานะ:** ${room.status}`;
+            return `### 🚪 **${room.name}**\n${imgMarkdown}**สถานที่:** ${room.location}\n**รองรับ:** ${room.capacity} คน\n**สถานะ:** ${room.status}`;
           }).join('\n\n---\n\n');
 
           return await sendResponse({
@@ -314,7 +318,7 @@ export async function POST(req: Request) {
         const roomList = roomsData.map((room) => {
           const imageUrl = formatImageUrl(room.image);
           const imgMarkdown = imageUrl ? `![${room.name}](${imageUrl})\n` : '';
-          return `### 🚪 **${room.name}**\n${imgMarkdown}- **สถานที่:** ${room.location}\n- **รองรับ:** ${room.capacity} คน\n- **สถานะ:** ${room.status}`;
+          return `### 🚪 **${room.name}**\n${imgMarkdown}**สถานที่:** ${room.location}\n**รองรับ:** ${room.capacity} คน\n**สถานะ:** ${room.status}`;
         }).join('\n\n---\n\n');
 
         return await sendResponse({
@@ -340,7 +344,7 @@ export async function POST(req: Request) {
       if (!isExcludeZoom) {
         return await sendResponse({
           reply: "กำลังนำท่านไปยังระบบจองห้องประชุม...",
-          actionUrl: "https://pacc.eoffice.go.th/room-booking/home"
+          actionUrl: "https://pacc.eoffice.go.th/room-booking/booking"
         });
       }
     }
@@ -362,7 +366,7 @@ export async function POST(req: Request) {
             const roomList = roomsOnFloor.map((room) => {
               const imageUrl = formatImageUrl(room.image);
               const imgMarkdown = imageUrl ? `![${room.name}](${imageUrl})\n` : '';
-              return `### 🚪 **${room.name}**\n${imgMarkdown}- **สถานที่:** ${room.location}\n- **รองรับ:** ${room.capacity} คน\n- **สถานะ:** ${room.status}`;
+              return `### 🚪 **${room.name}**\n${imgMarkdown}**สถานที่:** ${room.location}\n**รองรับ:** ${room.capacity} คน\n**สถานะ:** ${room.status}`;
             }).join('\n\n---\n\n');
 
             return await sendResponse({
@@ -391,13 +395,13 @@ export async function POST(req: Request) {
     if (statKeywords.some((kw) => query.includes(kw))) {
       if (['ไม่เข้าใช้งาน', 'ไม่เข้าใช้', 'noshow', 'no-show'].some(k => query.includes(k))) {
         return await sendResponse({
-          reply: `📊 **รายงานสถิติการไม่เข้าใช้งานห้องประชุม**\n\n- **ช่วงเวลาที่กำหนด:** 31 ธันวาคม 2567 ถึง 31 ธันวาคม 2570 (2024/12/31 - 2027/12/31)\n- **จำนวนรวมที่ไม่เข้าใช้งาน:** **29** ครั้ง\n\n💡 พิมพ์คำว่า "สถิติ" เพื่อดูรายงานภาพรวมทั้งหมดได้ครับ`
+          reply: `📊 **รายงานสถิติการไม่เข้าใช้งานห้องประชุม**\n\n**ช่วงเวลาที่กำหนด:** 31 ธันวาคม 2567 ถึง 31 ธันวาคม 2570 (2024/12/31 - 2027/12/31)\n**จำนวนรวมที่ไม่เข้าใช้งาน:** **29** ครั้ง\n\n💡 พิมพ์คำว่า "สถิติ" เพื่อดูรายงานภาพรวมทั้งหมดได้ครับ`
         });
       }
 
       if (query.includes('ยกเลิก')) {
         return await sendResponse({
-          reply: `📊 **รายงานสถิติการขอยกเลิกใช้งานห้องประชุม**\n\n- **ช่วงเวลาที่กำหนด:** 18 สิงหาคม 2569 - 31 ธันวาคม 2570\n- **รายการขอยกเลิกทั้งหมด:** **15** รายการ\n\n💡 พิมพ์คำว่า "สถิติ" เพื่อดูรายงานการใช้งานภาพรวมทั้งหมดได้ครับ`
+          reply: `📊 **รายงานสถิติการขอยกเลิกใช้งานห้องประชุม**\n\n**ช่วงเวลาที่กำหนด:** 18 สิงหาคม 2569 - 31 ธันวาคม 2570\n**รายการขอยกเลิกทั้งหมด:** **15** รายการ\n\n💡 พิมพ์คำว่า "สถิติ" เพื่อดูรายงานการใช้งานภาพรวมทั้งหมดได้ครับ`
         });
       }
 
@@ -415,7 +419,7 @@ export async function POST(req: Request) {
             const val2569 = row['2569'] || row['__EMPTY_1'] || Object.values(row)[2] || '1,926';
 
             return await sendResponse({
-              reply: `📊 **รายงานสถิติการใช้งานห้องประชุม สำนักงาน ป.ป.ท.**\n\n- **ปี 2568:** มีการใช้งานทั้งหมด **${val2568}** ครั้ง\n- **ปี 2569:** มีการใช้งานทั้งหมด **${val2569}** ครั้ง\n- **สถิติขอยกเลิกใช้งาน (18 ส.ค. 69 - 31 ธ.ค. 70):** **15** รายการ\n- **สถิติไม่เข้าใช้งาน (31 ธ.ค. 67 - 31 ธ.ค. 70):** **29** ครั้ง\n\n💡 ต้องการดูรายการจองเฉพาะห้องหรือค้นหาชื่อผู้จอง สามารถพิมพ์ค้นหาได้เลยครับ`
+              reply: `📊 **รายงานสถิติการใช้งานห้องประชุม สำนักงาน ป.ป.ท.**\n\n**ปี 2568:** มีการใช้งานทั้งหมด **${val2568}** ครั้ง\n**ปี 2569:** มีการใช้งานทั้งหมด **${val2569}** ครั้ง\n**สถิติขอยกเลิกใช้งาน (18 ส.ค. 69 - 31 ธ.ค. 70):** **15** รายการ\n**สถิติไม่เข้าใช้งาน (31 ธ.ค. 67 - 31 ธ.ค. 70):** **29** ครั้ง\n\n💡 ต้องการดูรายการจองเฉพาะห้องหรือค้นหาชื่อผู้จอง สามารถพิมพ์ค้นหาได้เลยครับ`
             });
           }
         }
@@ -425,7 +429,7 @@ export async function POST(req: Request) {
     }
 
     // -------------------------------------------------------------
-    // 6. Database Search (MariaDB Query)
+    // 6. Database Search (MariaDB / MySQL Query)
     // -------------------------------------------------------------
     const ignoredKeywords = [
       'ใช้งาน', 'ใช้', 'การใช้งาน', 'ระบบ', 'ทดสอบ', 'test', 'ขอใช้งาน', 'เปิดใช้งาน',

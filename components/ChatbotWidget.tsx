@@ -61,6 +61,11 @@ export default function ChatbotWidget() {
         messageToSend.includes('hello') ||
         messageToSend.includes('hi');
 
+      const isTodaySchedule =
+        messageToSend.includes('ตารางจองวันนี้') ||
+        messageToSend.includes('ตารางวันนี้') ||
+        messageToSend.includes('การจองวันนี้');
+
       const isStat =
         messageToSend.includes('สถิติ') ||
         messageToSend.includes('รายงาน') ||
@@ -102,6 +107,8 @@ export default function ChatbotWidget() {
 
       const itemType = isGreeting
         ? 'greeting'
+        : isTodaySchedule
+        ? 'room'
         : isStat
         ? 'stat'
         : isLocation
@@ -327,6 +334,13 @@ export default function ChatbotWidget() {
                 ref={scrollRef}
                 className="flex gap-1.5 overflow-x-auto scroll-smooth whitespace-nowrap py-1 px-0.5 flex-1 scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
               >
+                <button
+                  onClick={() => handleSend('ขอตารางจองวันนี้')}
+                  className="inline-flex items-center gap-1 bg-teal-50 text-teal-900 hover:bg-teal-100 px-2.5 py-1 rounded-full border border-teal-300 text-xs transition-colors shrink-0 cursor-pointer"
+                >
+                  📅 ตารางจองวันนี้
+                </button>
+
                 <button
                   onClick={() => handleSend('ขอจองห้อง')}
                   className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-900 hover:bg-indigo-100 px-2.5 py-1 rounded-full border border-indigo-200 text-xs transition-colors shrink-0 cursor-pointer"
