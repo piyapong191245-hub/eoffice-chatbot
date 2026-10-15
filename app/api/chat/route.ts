@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     const globalIgnored = ['ก', 'ข', 'ค', 'ง', 'ส', 'ม', 'เทส', 'test', '5'];
 
     // ข้อความกรณีไม่พบข้อมูล พร้อมคำแนะนำการพิมพ์
-    const notFoundReply = `ไม่พบข้อมูลที่ตรงกับ "${userMessage}"\n\n💡 **คำแนะนำการพิมพ์:**\n\nพิมพ์คำว่า **"ขอจองห้อง"** หรือ **"ตารางเวลา"**\nพิมพ์คำว่า **"ขอจองรถ"** หรือ **"กระบะ"** / **"รถตู้"**\nพิมพ์คำว่า **"ข้อมูลห้อง"** หรือ **"สถานที่"**\nกรุณาพิมพ์ชื่อ-นามสกุลจริง หรือชื่อสถานที่ปลายทางให้ครบถ้วน\nพิมพ์คำว่า **"สถิติ"** เพื่อดูรายงานสรุปยอดการใช้งาน`;
+    const notFoundReply = `ไม่พบข้อมูลที่ตรงกับ "${userMessage}"\n\n💡 **คำแนะนำการพิมพ์:**\n\nพิมพ์คำว่า **"ขอจองห้อง"** หรือ **"ตารางเวลา"**\nพิมพ์คำว่า **"ขอจองรถ"** หรือ **"กระบะ"** / **"รถตู้"**\nพิมพ์คำว่า **"ข้อมูลห้อง"** หรือ **"สถานที่"**\nกรุณาพิมพ์ชื่อ-นามสกุลจริงให้ครบถ้วน\nพิมพ์คำว่า **"สถิติ"** เพื่อดูรายงานสรุปยอดการใช้งาน`;
 
     if (cleanQuery.length > 0 && (cleanQuery.length < 2 || globalIgnored.includes(cleanQuery))) {
       return await sendResponse({ reply: notFoundReply });
@@ -73,17 +73,17 @@ export async function POST(req: Request) {
     };
 
     // -------------------------------------------------------------
-    // 0. Greeting Handler
+    // 0. Greeting Handler (แก้ไขใส่ " ครอบชื่อคำสั่ง)
     // -------------------------------------------------------------
     const greetingKeywords = ['สวัสดี', 'สวัสดีครับ', 'สวัสดีค่ะ', 'หวัดดี', 'hi', 'hello', 'สอบถาม', 'เริ่ม'];
     if (greetingKeywords.some((kw) => query === kw || query.includes(kw))) {
       return await sendResponse({
-        reply: `สวัสดีครับ! 👋 ผมคือ **PACC e-Office Assistant** ยินดีให้บริการครับ\n\nคุณสามารถพิมพ์สอบถามข้อมูลได้ดังนี้ครับ:\n**จองห้องประชุม / รถยนต์:** พิมพ์ *"ขอจองห้อง"* หรือ *"ขอจองรถ"*\n**ค้นหาห้องประชุม:** พิมพ์ชื่อห้อง เช่น *"ห้อง Command"* หรือ *"ขอห้องออนไลน์"*\n**ค้นหารายการรถ:** พิมพ์ *"รายการรถ"*, *"กระบะ"* หรือ *"รถตู้"*\n**ดูสถิติการใช้งาน:** พิมพ์ *"สถิติ"*`
+        reply: `สวัสดีครับ! 👋 ผมคือ **PACC e-Office Assistant** ยินดีให้บริการครับ\n\nคุณสามารถพิมพ์สอบถามข้อมูลได้ดังนี้ครับ:\n**จองห้องประชุม / รถยนต์:** พิมพ์ **"ขอจองห้อง"** หรือ **"ขอจองรถ"**\n**ค้นหาห้องประชุม:** พิมพ์ชื่อห้อง เช่น **"ห้องประชุม 2 (ห้องเล็ก)"** หรือ **"ขอห้องออนไลน์"**\n**ค้นหารายการรถ:** พิมพ์ **"รายการรถ"**, **"กระบะ"** หรือ **"รถตู้"**\n**ดูสถิติการใช้งาน:** พิมพ์ **"สถิติ"**`
       });
     }
 
     // -------------------------------------------------------------
-    // 0.5 Real-time Today's Schedule (เด้งเปิดหน้าตารางเวลา)
+    // 0.5 Real-time Today's Schedule
     // -------------------------------------------------------------
     const todayScheduleKeywords = ['ตารางจองวันนี้', 'ตารางวันนี้', 'การจองวันนี้', 'ขอตารางจองวันนี้'];
     if (todayScheduleKeywords.some((kw) => query.includes(kw))) {
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     }
 
     // -------------------------------------------------------------
-    // 1. Vehicle Queries (ระบบรถยนต์)
+    // 1. Vehicle Queries
     // -------------------------------------------------------------
     const vehicleKeywords = ['จองรถ', 'ขอจองรถ', 'ใช้รถ', 'คนขับ', 'พนักงานขับรถ'];
     if (vehicleKeywords.some((kw) => query.includes(kw))) {
@@ -198,10 +198,34 @@ export async function POST(req: Request) {
     // 2. Room Info Search
     // -------------------------------------------------------------
     const roomsData = readJsonFile<any[]>(path.join(dataDir, 'room_info.json'));
-    const excludeZoomKeywords = ['ไม่เอา zoom', 'ไม่เอาซูม', 'ไม่รวม zoom', 'ไม่ใช่ zoom', 'ไม่เอาห้อง zoom', 'ไม่เอาออนไลน์', 'ไม่เอาห้องออนไลน์', 'ไม่รวมออนไลน์'];
+    const excludeZoomKeywords = [
+      'ไม่เอา zoom', 'ไม่เอาซูม', 'ไม่รวม zoom', 'ไม่ใช่ zoom',
+      'ไม่เอาห้อง zoom', 'ไม่เอาออนไลน์', 'ไม่เอาห้องออนไลน์',
+      'ไม่รวมออนไลน์', 'ไม่ออนไลน์', 'ขอห้องไม่ออนไลน์', 'ห้องไม่ออนไลน์'
+    ];
 
     if (roomsData) {
       const isExcludeZoom = excludeZoomKeywords.some((kw) => query.includes(kw));
+
+      if (isExcludeZoom) {
+        const onsiteRooms = roomsData.filter((room) =>
+          !(room.name || '').toLowerCase().includes('zoom') &&
+          !(room.location || '').toLowerCase().includes('ออนไลน์') &&
+          !(room.name || '').toLowerCase().includes('ออนไลน์')
+        );
+
+        if (onsiteRooms.length > 0) {
+          const roomList = onsiteRooms.map((room) => {
+            const imageUrl = formatImageUrl(room.image);
+            const imgMarkdown = imageUrl ? `![${room.name}](${imageUrl})\n` : '';
+            return `### 🚪 **${room.name}**\n${imgMarkdown}**สถานที่:** ${room.location}\n**รองรับ:** ${room.capacity} คน\n**สถานะ:** ${room.status}`;
+          }).join('\n\n---\n\n');
+
+          return await sendResponse({
+            reply: `🏢 **รายการห้องประชุม ณ อาคาร Software Park (ไม่รวมห้องออนไลน์):**\n\n${roomList}\n\n💡 พิมพ์ชื่อห้องเพื่อดูรายละเอียดเพิ่มเติมได้ครับ`
+          });
+        }
+      }
 
       let matchedRoom = roomsData.find((room) => {
         const roomName = (room.name || '').toLowerCase().replace(/\s+/g, '');
@@ -290,26 +314,6 @@ export async function POST(req: Request) {
 
           return await sendResponse({
             reply: `🏢 **รายการ${title}:**\n\n${roomList}\n\n💡 พิมพ์ชื่อห้องเพื่อดูรายละเอียดและสแกน QR Code ได้เลยครับ`
-          });
-        }
-      }
-
-      if (excludeZoomKeywords.some((kw) => query === kw)) {
-        const onsiteRooms = roomsData.filter((room) =>
-          !(room.name || '').toLowerCase().includes('zoom') &&
-          !(room.location || '').toLowerCase().includes('ออนไลน์') &&
-          !(room.name || '').toLowerCase().includes('ออนไลน์')
-        );
-
-        if (onsiteRooms.length > 0) {
-          const roomList = onsiteRooms.map((room) => {
-            const imageUrl = formatImageUrl(room.image);
-            const imgMarkdown = imageUrl ? `![${room.name}](${imageUrl})\n` : '';
-            return `### 🚪 **${room.name}**\n${imgMarkdown}**สถานที่:** ${room.location}\n**รองรับ:** ${room.capacity} คน\n**สถานะ:** ${room.status}`;
-          }).join('\n\n---\n\n');
-
-          return await sendResponse({
-            reply: `🏢 **รายการห้องประชุม ณ อาคาร Software Park (ไม่รวมห้องออนไลน์):**\n\n${roomList}\n\n💡 พิมพ์ชื่อห้องเพื่อดูรายละเอียดเพิ่มเติมได้ครับ`
           });
         }
       }
@@ -478,6 +482,7 @@ export async function POST(req: Request) {
               ? endDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })
               : '';
 
+            // แก้ไขจุดแสดงเวลาไม่ให้ขึ้นบรรทัดใหม่มั่ว
             const timeDisplay = (startTimeStr && endTimeStr) ? ` (${startTimeStr} - ${endTimeStr} น.)` : '';
 
             return `**รายการจองรถ #${item.res_id}**\n\n` +
@@ -521,6 +526,7 @@ export async function POST(req: Request) {
               ? endDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false })
               : '';
 
+            // แก้ไขจุดแสดงเวลาไม่ให้ขึ้นบรรทัดใหม่มั่ว
             const timeDisplay = (startTimeStr && endTimeStr) ? ` (${startTimeStr} - ${endTimeStr} น.)` : '';
 
             let statusText = item.status || 'จองสำเร็จ';

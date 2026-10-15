@@ -11,15 +11,33 @@ type MessageType = {
   itemType?: 'room' | 'car' | 'car-type' | 'greeting' | 'car-list' | 'room-info' | 'location' | 'stat';
 };
 
+// ฟังก์ชันช่วยจัดระเบียบข้อความแนะนำให้อ่านง่าย
+const formatMessage = (text: string) => {
+  if (!text) return '';
+  return text
+    .replace(/"([^"]+)"/g, '`"$1"`')
+    .replace(/พิมพ์คำว่า/g, '**พิมพ์คำว่า**')
+    .replace(/ หรือ /g, ' **หรือ** ')
+    .replace(/(\*\*พิมพ์คำว่า\*\*)/g, '\n- $1')
+    .replace(/(กรุณาพิมพ์ชื่อ)/g, '\n- $1')
+    .replace(/(คุณสามารถพิมพ์สอบถามข้อมูลได้ดังนี้ครับ:)/g, '$1\n')
+    .replace(/(จองห้องประชุม \/ รถยนต์:)/g, '\n- **$1**')
+    .replace(/(ค้นหาห้องประชุม:)/g, '\n- **$1**')
+    .replace(/(ค้นหารายการรถ:)/g, '\n- **$1**')
+    .replace(/(ดูสถิติการใช้งาน:)/g, '\n- **$1**');
+};
+
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [input, setInput] = useState('');
 
+  const initialGreeting = 'สวัสดีครับ ผมคือผู้ช่วยระบบ **e-Office (สำนักงาน ป.ป.ท.)**\n\nสามารถสอบถามข้อมูลการจอง **ห้องประชุม** หรือ **รถยนต์ส่วนกลาง** ได้เลยครับ';
+
   const [messages, setMessages] = useState<MessageType[]>([
     {
       sender: 'bot',
-      text: 'สวัสดีครับ ผมคือผู้ช่วยระบบ **e-Office (สำนักงาน ป.ป.ท.)**\n\nสามารถสอบถามข้อมูลการจอง **ห้องประชุม** หรือ **รถยนต์ส่วนกลาง** ได้เลยครับ',
+      text: initialGreeting,
       itemType: 'greeting'
     }
   ]);
@@ -148,7 +166,7 @@ export default function ChatbotWidget() {
 
   const clearChat = () => {
     setMessages([
-      { sender: 'bot', text: 'สวัสดีครับ ผมคือผู้ช่วยระบบ **e-Office (สำนักงาน ป.ป.ท.)**\n\nสามารถสอบถามข้อมูลการจอง **ห้องประชุม** หรือ **รถยนต์ส่วนกลาง** ได้เลยครับ' }
+      { sender: 'bot', text: initialGreeting, itemType: 'greeting' }
     ]);
   };
 
@@ -249,15 +267,23 @@ export default function ChatbotWidget() {
                 )}
 
                 <div
-                  className={`p-3 rounded-2xl max-w-[80%] shadow-sm ${msg.sender === 'user'
+                  className={`p-3.5 rounded-2xl max-w-[85%] shadow-xs ${msg.sender === 'user'
                     ? 'bg-blue-900 text-white rounded-tr-none'
                     : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
                     }`}
                 >
                   <ReactMarkdown
                     components={{
-                      p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-relaxed text-xs sm:text-sm">{children}</p>,
-                      strong: ({ children }) => <strong className="font-semibold text-amber-600 dark:text-amber-400">{children}</strong>,
+                      p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed text-xs sm:text-sm">{children}</p>,
+                      strong: ({ children }) => <strong className="font-semibold text-amber-600">{children}</strong>,
+                      ul: ({ children }) => <ul className="list-disc list-outside space-y-1.5 my-2 pl-4 text-xs sm:text-sm">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal list-outside space-y-1.5 my-2 pl-4 text-xs sm:text-sm">{children}</ol>,
+                      li: ({ children }) => <li className="text-xs sm:text-sm text-gray-700 leading-relaxed pl-0.5">{children}</li>,
+                      code: ({ children }) => (
+                        <code className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded text-[11px] font-mono border border-slate-200 font-medium inline-block my-0.5">
+                          {children}
+                        </code>
+                      ),
                       img: ({ node, ...props }) => (
                         <img
                           {...props}
@@ -265,11 +291,11 @@ export default function ChatbotWidget() {
                           alt={props.alt || 'image'}
                         />
                       ),
-                      h3: ({ children }) => <h3 className="font-bold text-sm text-blue-950 my-1">{children}</h3>,
+                      h3: ({ children }) => <h3 className="font-bold text-sm text-blue-950 my-1.5">{children}</h3>,
                       hr: () => <hr className="my-2 border-gray-200" />
                     }}
                   >
-                    {msg.text}
+                    {msg.sender === 'bot' ? formatMessage(msg.text) : msg.text}
                   </ReactMarkdown>
 
                   {msg.sender === 'bot' && msg.qrUrl && (
